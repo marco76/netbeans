@@ -113,6 +113,21 @@ public class DAPConfiguration {
         }
     }
 
+    /**
+     * Start a debug session and report completion of the adapter handshake.
+     * @param attach true to attach, false to launch
+     * @return completion of launch/attach and breakpoint configuration, or a startup failure
+     */
+    public java.util.concurrent.CompletableFuture<Void> startAsync(boolean attach) {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try {
+                return DAPDebugger.startDebuggerAsync(this, attach ? Type.ATTACH : Type.LAUNCH);
+            } catch (Exception ex) {
+                throw new java.util.concurrent.CompletionException(ex);
+            }
+        }).thenCompose(started -> started);
+    }
+
     static {
         DAPConfigurationAccessor.setInstance(new DAPConfigurationAccessor() {
             @Override

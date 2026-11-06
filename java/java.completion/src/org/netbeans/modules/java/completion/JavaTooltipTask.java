@@ -58,6 +58,13 @@ public final class JavaTooltipTask extends BaseTask {
     private static final String THIS_KEYWORD = "this"; //NOI18N
     private static final String SUPER_KEYWORD = "super"; //NOI18N
 
+    private List<List<String>> annotationAttributes;
+
+    /** Attribute name, type, default and description, separate from LSP signatures. */
+    public List<List<String>> getAnnotationAttributes() {
+        return annotationAttributes;
+    }
+
     private int anchorOffset;
     private List<List<String>> toolTipData;
     private List<String> toolTipSignatures;
@@ -237,10 +244,12 @@ public final class JavaTooltipTask extends BaseTask {
                 final Trees trees = controller.getTrees();
                 final Element element = trees.getElement(path);
                 if (element != null && element.getKind() == ANNOTATION_TYPE) {
-                    final Element activeElement = lastTree != null && lastTree.getKind() == Tree.Kind.ASSIGNMENT ? trees.getElement(new TreePath(path, ((AssignmentTree) lastTree).getVariable())) : null;
+                    final Element activeElement = lastTree != null && lastTree.getKind() == Tree.Kind.ASSIGNMENT ? trees.getElement(new TreePath(new TreePath(path, lastTree), ((AssignmentTree) lastTree).getVariable())) : null;
                     TypeUtilities tu = controller.getTypeUtilities();
                     List<List<String>> data = new ArrayList<>();
                     List<String> signatures = new ArrayList<>();
+                    annotationAttributes = new ArrayList<>();
+                    activeSignatureIndex = -1;
                     for (Element e : element.getEnclosedElements()) {
                         if (e.getKind() == METHOD && e.asType().getKind() == TypeKind.EXECUTABLE) {
                             StringBuilder sb = new StringBuilder();
@@ -250,9 +259,23 @@ public final class JavaTooltipTask extends BaseTask {
                             if (defaultValue != null) {
                                 sb.append(" default ").append(defaultValue.toString());
                             }
-                            if (e == activeElement) {
+                            if (e.equals(activeElement) || activeElement == null
+                                    && !at.getArguments().isEmpty() && e.getSimpleName().contentEquals("value")) {
                                 activeSignatureIndex = signatures.size();
                             }
+                            String description = controller.getElements().getDocComment(e);
+                            if (description != null) {
+                                description = description.split("\\n\\s*@", 2)[0]
+                                        .replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+                            }
+                            if (description != null && description.length() > 240) {
+                                description = description.substring(0, 237) + "...";
+                            }
+                            annotationAttributes.add(java.util.Arrays.asList(
+                                    e.getSimpleName().toString(),
+                                    tu.getTypeName(((ExecutableType) e.asType()).getReturnType()).toString(),
+                                    defaultValue != null ? defaultValue.toString() : "Required",
+                                    description != null ? description : ""));
                             data.add(Collections.singletonList(sb.toString()));
                             signatures.add(sb.toString());
                         }

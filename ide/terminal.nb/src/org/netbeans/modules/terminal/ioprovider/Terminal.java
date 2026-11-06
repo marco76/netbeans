@@ -70,6 +70,7 @@ import javax.swing.JComponent;
 import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.TransferHandler;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
@@ -178,6 +179,19 @@ public final class Terminal extends JComponent {
         NbPreferences.forModule(TermAdvancedOption.class);
     private final TermOptions termOptions;
     private final TermOptionsPCL termOptionsPCL = new TermOptionsPCL();
+    // Session-only UI hint; no dependency on the presenter module or saved options.
+    private final PropertyChangeListener presenterListener = event -> {
+        if ("nb.presenter.fontIncrease".equals(event.getPropertyName())
+                || "nb.presenter.outputFontSize".equals(event.getPropertyName())) { // NOI18N
+            if (SwingUtilities.isEventDispatchThread()) {
+                if (!isDisposed()) applyTermOptions(false);
+            } else {
+                SwingUtilities.invokeLater(() -> {
+                    if (!isDisposed()) applyTermOptions(false);
+                });
+            }
+        }
+    };
     
     private final FileObject shortcutsDir = FileUtil.getConfigFile("Terminal/Shortcuts"); //NOI18N
     private final ShortcutsListener shortcutsListener = new ShortcutsListener();
@@ -369,6 +383,7 @@ public final class Terminal extends JComponent {
 
 	shortcutsDir.addFileChangeListener(shortcutsListener);
         termOptions.addPropertyChangeListener(termOptionsPCL);
+        UIManager.getDefaults().addPropertyChangeListener(presenterListener);
         applyTermOptions(true);
 	
 	final Set<Action> actions = new HashSet<Action>();
@@ -525,6 +540,7 @@ public final class Terminal extends JComponent {
         */
 
         this.setLayout(new BorderLayout());
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(8, 10, 8, 8));
         add(term, BorderLayout.CENTER);
 	setFocusable(false);
     }
@@ -540,6 +556,7 @@ public final class Terminal extends JComponent {
 	findState = null;
 	shortcutsDir.removeFileChangeListener(shortcutsListener);
         termOptions.removePropertyChangeListener(termOptionsPCL);
+        UIManager.getDefaults().removePropertyChangeListener(presenterListener);
 	tio.dispose();
     }
 
@@ -608,8 +625,13 @@ public final class Terminal extends JComponent {
 
     private void applyTermOptions(boolean initial) {
         term.setFixedFont(true);
-        term.setFont(termOptions.getFont());
+        java.awt.Font font = termOptions.getFont();
+        int increase = Math.max(0, Math.min(24, UIManager.getInt("nb.presenter.fontIncrease"))); // NOI18N
+        int target = UIManager.getInt("nb.presenter.outputFontSize");
+        term.setFont(target > 0 ? font.deriveFont((float) target)
+                : increase == 0 ? font : font.deriveFont(font.getSize2D() + increase));
 
+        setBackground(termOptions.getBackground());
         term.setBackground(termOptions.getBackground());
         term.setForeground(termOptions.getForeground());
         term.setHighlightColor(termOptions.getSelectionBackground());

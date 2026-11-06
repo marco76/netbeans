@@ -44,7 +44,11 @@ import org.openide.util.Utilities;
 public class CompletionJList extends JList {
 
     private static final int DARKER_COLOR_COMPONENT = 5;
-    private static final int SUB_MENU_ICON_GAP = 1;
+    private static final int ITEM_VERTICAL_PADDING = 10;
+    private static final int SELECTION_INSET_X = 3;
+    private static final int ITEM_HORIZONTAL_PADDING = 8;
+    private static final int SELECTION_ARC = 6;
+    private static final int SUB_MENU_ICON_GAP = 4;
     private static final Icon subMenuIcon = ImageUtilities.loadIcon("org/netbeans/modules/editor/completion/resources/suggestion.png", false); // NOI18N
 
     private final RenderComponent renderComponent;
@@ -59,16 +63,24 @@ public class CompletionJList extends JList {
         this.maxVisibleRowCount = maxVisibleRowCount;
         this.editorComponent = editorComponent;
         addMouseListener(mouseListener);
-        setFont(editorComponent.getFont());
+        Font popupFont = UIManager.getFont("List.font"); // NOI18N
+        setFont(popupFont != null ? popupFont.deriveFont(Math.max(14f, popupFont.getSize2D()))
+                : editorComponent.getFont());
         setLayoutOrientation(JList.VERTICAL);
-        setFixedCellHeight(fixedItemHeight = Math.max(CompletionLayout.COMPLETION_ITEM_HEIGHT, getFontMetrics(getFont()).getHeight()));
+        setFixedCellHeight(fixedItemHeight = Math.max(CompletionLayout.COMPLETION_ITEM_HEIGHT, getFontMetrics(getFont()).getHeight() + ITEM_VERTICAL_PADDING));
         setModel(new Model(Collections.emptyList()));
         setFocusable(false);
+
+        Color listBg = UIManager.getColor("nb.completion.background"); // NOI18N
+        setBackground(editorColor(listBg, editorComponent.getBackground()));
+        Color listFg = UIManager.getColor("nb.completion.foreground"); // NOI18N
+        setForeground(editorColor(listFg, editorComponent.getForeground()));
 
         renderComponent = new RenderComponent();
         setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
         setCellRenderer(new ListCellRenderer() {
             private final ListCellRenderer defaultRenderer = new DefaultListCellRenderer();
+            private final boolean alternateRowBg = UIManager.getBoolean("nb.completion.alternateRowBackground"); // NOI18N
 
             @Override
             public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
@@ -84,7 +96,7 @@ public class CompletionJList extends JList {
                         fgColor = list.getSelectionForeground();
                     } else { // not selected
                         bgColor = list.getBackground();
-                        if ((index % 2) == 0) { // every second item slightly different
+                        if (alternateRowBg && (index % 2) == 0) { // optional alternating row background
                             bgColor = new Color(
                                     Math.abs(bgColor.getRed() - DARKER_COLOR_COMPONENT),
                                     Math.abs(bgColor.getGreen() - DARKER_COLOR_COMPONENT),
@@ -111,11 +123,25 @@ public class CompletionJList extends JList {
         getAccessibleContext().setAccessibleDescription(LocaleSupport.getString("ACSD_CompletionView"));
     }
 
+    // An editor color scheme can be dark even when the application theme is light.
+    static Color editorColor(Color themeColor, Color editorColor) {
+        if (themeColor == null) {
+            return editorColor;
+        }
+        int themeBrightness = (themeColor.getRed() * 299 + themeColor.getGreen() * 587 + themeColor.getBlue() * 114) / 1000;
+        int editorBrightness = (editorColor.getRed() * 299 + editorColor.getGreen() * 587 + editorColor.getBlue() * 114) / 1000;
+        return Math.abs(themeBrightness - editorBrightness) > 100 ? editorColor : themeColor;
+    }
+
     public @Override void paint(Graphics g) {
         GraphicsUtils.configureDefaultRenderingHints(g);
         super.paint(g);
     }
     
+    void setMaximumVisibleRows(int count) {
+        maxVisibleRowCount = count;
+    }
+
     void setData(List data, int selectedIndex) {
         smartIndex = -1;
         if (data != null) {
@@ -337,20 +363,40 @@ public class CompletionJList extends JList {
             int height = getHeight();
 
             // Clear the background
-            g.setColor(bgColor);
-            g.fillRect(0, 0, itemRenderWidth, height);
+            if (selected && g instanceof Graphics2D) {
+                g.setColor(CompletionJList.this.getBackground());
+                g.fillRect(0, 0, itemRenderWidth, height);
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(bgColor);
+                g2d.fillRoundRect(SELECTION_INSET_X, 0, Math.max(0, itemRenderWidth - SELECTION_INSET_X * 2), height, SELECTION_ARC, SELECTION_ARC);
+                g2d.dispose();
+            } else {
+                g.setColor(bgColor);
+                g.fillRect(0, 0, itemRenderWidth, height);
+            }
             g.setColor(fgColor);
 
-            // Render the item
-            item.render(g, CompletionJList.this.getFont(), getForeground(), bgColor,
-                    itemRenderWidth, getHeight(), selected);
+            // Keep provider icons and text inside a consistent horizontal gutter.
+            Graphics itemGraphics = g.create();
+            itemGraphics.translate(ITEM_HORIZONTAL_PADDING, 0);
+            item.render(itemGraphics, CompletionJList.this.getFont(), getForeground(), bgColor,
+                    Math.max(0, itemRenderWidth - ITEM_HORIZONTAL_PADDING * 2), getHeight(), selected);
+            itemGraphics.dispose();
             if (selected && item instanceof CompositeCompletionItem && !((CompositeCompletionItem)item).getSubItems().isEmpty()) {
                 subMenuIcon.paintIcon(null, g, itemRenderWidth - subMenuIcon.getIconWidth() - SUB_MENU_ICON_GAP, (height - subMenuIcon.getIconHeight()) / 2);
             }
             
             if (separator) {
-                g.setColor(Color.gray);
-                g.drawLine(0, 0, itemRenderWidth, 0);
+                Color sepColor = UIManager.getColor("nb.completion.separatorColor"); // NOI18N
+                if (sepColor == null) {
+                    sepColor = UIManager.getColor("Separator.foreground"); // NOI18N
+                }
+                if (sepColor == null) {
+                    sepColor = Color.gray;
+                }
+                g.setColor(sepColor);
+                g.drawLine(SELECTION_INSET_X, 0, Math.max(SELECTION_INSET_X, itemRenderWidth - SELECTION_INSET_X), 0);
                 g.setColor(fgColor);
             }
         }
@@ -363,7 +409,8 @@ public class CompletionJList extends JList {
                         getDefaultConfiguration().createCompatibleImage(1, 1).getGraphics();
                 assert (cellPreferredSizeGraphics != null);
             }
-            return new Dimension(item.getPreferredWidth(cellPreferredSizeGraphics, CompletionJList.this.getFont()),
+            return new Dimension(item.getPreferredWidth(cellPreferredSizeGraphics, CompletionJList.this.getFont())
+                    + ITEM_HORIZONTAL_PADDING * 2,
                     fixedItemHeight);
         }
     }

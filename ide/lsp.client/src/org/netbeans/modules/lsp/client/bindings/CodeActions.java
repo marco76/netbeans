@@ -69,6 +69,7 @@ public class CodeActions implements CodeGenerator.Factory {
                              (server, result) -> {
                                  if (result != null) {
                                      for (Either<Command, CodeAction> cmd : result) {
+                                         if (cmd.isRight() && cmd.getRight().getDisabled() != null) continue;
                                          output.add(new CodeGenerator() {
                                              @Override
                                              public String getDisplayName() {

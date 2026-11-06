@@ -42,6 +42,8 @@ public final class HtmlTokenList extends AbstractTokenList {
     private boolean hidden = false;
     private Iterator<TokenSequence<?>> tss;
     private TokenSequence<?> ts;
+    private final java.util.List<int[]> expressions = new java.util.ArrayList<>();
+
 
     public HtmlTokenList(BaseDocument doc, String fileType) {
         super(doc);
@@ -51,6 +53,38 @@ public final class HtmlTokenList extends AbstractTokenList {
     @Override
     public void setStartOffset(int offset) {
         super.setStartOffset (offset);
+        expressions.clear();
+        // Modern Angular control-flow headers are HTML TEXT tokens, but contain
+        // code (including URLs and identifiers), not prose to spellcheck.
+        try {
+            String source = doc.getText(0, doc.getLength());
+            java.util.regex.Matcher headers = java.util.regex.Pattern.compile(
+                    "<!--[\\s\\S]*?(?:-->|$)|<[^>]*>|@(if|for|switch|case|defer|let)\\b").matcher(source);
+            while (headers.find()) {
+                if (headers.group(1) == null) continue;
+                int start = headers.start(), end = headers.end();
+                while (end < source.length() && Character.isWhitespace(source.charAt(end))) end++;
+                boolean declaration = "let".equals(headers.group(1));
+                if (!declaration && (end == source.length() || source.charAt(end) != '(')) continue;
+                int depth = 0;
+                char quote = 0;
+                for (; end < source.length(); end++) {
+                    char c = source.charAt(end);
+                    if (quote != 0) {
+                        if (c == '\\') end++;
+                        else if (c == quote) quote = 0;
+                    } else if (c == '\'' || c == '"' || c == '`') quote = c;
+                    else if (declaration && c == ';') { end++; break; }
+                    else if (c == '(') depth++;
+                    else if (c == ')' && --depth == 0) { end++; break; }
+                }
+                expressions.add(new int[]{start, Math.min(end, source.length())});
+                headers.region(Math.min(end, source.length()), source.length());
+            }
+        } catch (BadLocationException ex) {
+            // The token sequence below will reject an invalid document snapshot.
+        }
+
 
         if(fileType != null) {
             FileObject fileObject = FileUtil.getConfigFile ("Spellcheckers/" + fileType);
@@ -102,7 +136,19 @@ public final class HtmlTokenList extends AbstractTokenList {
             TokenId id = ts.token().id();
 
             if (id == HTMLTokenId.SGML_COMMENT || id == HTMLTokenId.BLOCK_COMMENT || id == HTMLTokenId.TEXT) {
-                return new SpellSpan(ts.offset(), ts.offset() + ts.token().length());
+                int start = Math.max(nextSearchOffset, ts.offset());
+                int end = ts.offset() + ts.token().length();
+                if (id == HTMLTokenId.TEXT) {
+                    for (int[] expression : expressions) {
+                        if (expression[1] <= start) continue;
+                        if (expression[0] >= end) break;
+                        if (expression[0] > start) {
+                            return new SpellSpan(start, expression[0]);
+                        }
+                        start = Math.max(start, expression[1]);
+                    }
+                }
+                if (start < end) return new SpellSpan(start, end);
             }
         }
 

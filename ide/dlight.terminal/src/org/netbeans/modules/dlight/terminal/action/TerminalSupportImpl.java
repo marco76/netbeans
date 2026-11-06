@@ -89,6 +89,12 @@ public final class TerminalSupportImpl {
         JButton button = new JButton(action);
         button.setBorderPainted(false);
         button.setOpaque(false);
+        button.setFocusable(false);
+        button.setRolloverEnabled(true);
+        button.setMargin(new java.awt.Insets(7, 7, 7, 7));
+        button.setPreferredSize(new java.awt.Dimension(34, 34));
+        button.putClientProperty("JButton.buttonType", "toolBarButton"); // NOI18N
+        button.getAccessibleContext().setAccessibleName((String) action.getValue(Action.NAME));
         button.setText(null);
         button.putClientProperty("hideActionText", Boolean.TRUE); // NOI18N
         Object icon = action.getValue(Action.SMALL_ICON);

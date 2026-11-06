@@ -262,6 +262,9 @@ public class FlatViewTabDisplayerUI extends AbstractViewTabDisplayerUI {
                 g.fillRect(0, 0, width - tabSeparatorWidth, contentBorderWidth); // Top
                 g.fillRect(0, 0, contentBorderWidth, height); // Left
                 g.fillRect(width - tabSeparatorWidth - contentBorderWidth, 0, contentBorderWidth, height); // Right
+            } else if (!underlineAtTop) {
+                g.setColor(contentBorderColor);
+                g.fillRect(0, height - contentBorderWidth, width, contentBorderWidth);
             }
 
             if (underlineHeight > 0) {
@@ -271,7 +274,7 @@ public class FlatViewTabDisplayerUI extends AbstractViewTabDisplayerUI {
                 if (underlineAtTop) {
                     g.fillRect(0, 0, width - tabSeparatorWidth, underlineHeight);
                 } else {
-                    g.fillRect(0, height - underlineHeight, width - tabSeparatorWidth, underlineHeight);
+                    g.fillRoundRect(0, height - underlineHeight, width - tabSeparatorWidth, underlineHeight, underlineHeight, underlineHeight);
                 }
             }
         } else {

@@ -215,15 +215,22 @@ public class Utils {
             } else {
                 CodeAction action = cmd.getRight();
 
-                if (action.getEdit() == null) {
-                    //attempt to resolve:
+                if (action.getDisabled() != null) return;
+                var provider = server.getInitResult().getCapabilities().getCodeActionProvider();
+                if (action.getEdit() == null && provider != null && provider.isRight()
+                        && Boolean.TRUE.equals(provider.getRight().getResolveProvider())) {
+                    // Resolve deferred edits only when the server supports it:
                     try {
                         action = server.getTextDocumentService().resolveCodeAction(action).get();
                     } catch (InterruptedException | ExecutionException ex) {
-                        //ignore(?)
+                        if (ex instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
                         LOG.log(Level.FINE, null, ex);
                     }
                 }
+                if (action == null || action.getDisabled() != null) return;
                 if (action.getEdit() != null) {
                     Utils.applyWorkspaceEdit(action.getEdit());
                 }

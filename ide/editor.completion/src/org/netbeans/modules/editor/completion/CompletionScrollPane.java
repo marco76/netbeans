@@ -94,6 +94,8 @@ public class CompletionScrollPane extends JScrollPane {
 
         // Add the completion view
         view = new CompletionJList(maxVisibleRowCount, mouseListener, editorComponent);
+        view.setMaximumVisibleRows(Math.max(2,
+                (getMaximumSize().height - 10) / view.getFixedCellHeight()));
 
         // Apply selection colors as CompletionJList selecion also means focused
         Color selBg = UIManager.getColor("nb.completion.selectedBackground"); //NOI18N
@@ -107,6 +109,20 @@ public class CompletionScrollPane extends JScrollPane {
 
         if (listSelectionListener != null) {
             view.addListSelectionListener(listSelectionListener);
+        }
+        setBackground(view.getBackground());
+        getViewport().setBackground(view.getBackground());
+        Color borderColor = UIManager.getColor("nb.completion.borderColor"); // NOI18N
+        if (borderColor == null) {
+            borderColor = UIManager.getColor("PopupMenu.borderColor"); // NOI18N
+        }
+        if (borderColor == null) {
+            borderColor = UIManager.getColor("Component.borderColor"); // NOI18N
+        }
+        if (borderColor != null) {
+            setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(borderColor, 1),
+                    BorderFactory.createEmptyBorder(4, 0, 4, 0)));
         }
         setViewportView(view);
         installKeybindings(editorComponent);
@@ -174,8 +190,27 @@ public class CompletionScrollPane extends JScrollPane {
                 topLabel.setText(title);
             } else {
                 topLabel = new JLabel(title);
-                topLabel.setForeground(Color.blue);
-                topLabel.setBorder(BorderFactory.createEmptyBorder(0, 2, 0, 2));
+                Color titleFg = UIManager.getColor("Component.linkColor"); // NOI18N
+                if (titleFg == null) {
+                    titleFg = UIManager.getColor("nb.completion.rightForeground"); // NOI18N
+                }
+                if (titleFg == null) {
+                    titleFg = view.getForeground();
+                }
+                topLabel.setForeground(titleFg);
+                topLabel.setBackground(view.getBackground());
+                topLabel.setOpaque(true);
+                Color sepColor = UIManager.getColor("nb.completion.separatorColor"); // NOI18N
+                if (sepColor == null) {
+                    sepColor = UIManager.getColor("Separator.foreground"); // NOI18N
+                }
+                if (sepColor != null) {
+                    topLabel.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(0, 0, 1, 0, sepColor),
+                            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+                } else {
+                    topLabel.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+                }
                 setColumnHeaderView(topLabel);
             }
         }

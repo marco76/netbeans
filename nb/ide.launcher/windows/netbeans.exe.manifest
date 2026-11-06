@@ -25,7 +25,7 @@
    name="netbeans.exe"
    type="win32"/>
 
-<description>NetBeans IDE process</description>
+<description>AlpLibre IDE process</description>
 <dependency>
   <dependentAssembly>
     <assemblyIdentity

@@ -125,7 +125,7 @@ public class MicronautSymbolSearcher implements IndexSearcher {
         return duplicates;
     }
 
-    private static Set<SymbolDescriptor> getSymbols(Project project, String textForQuery) {
+    static Set<SymbolDescriptor> getSymbols(Project project, String textForQuery) {
         Set<SymbolDescriptor> symbols = new HashSet<>();
         for (SourceGroup sg : ProjectUtils.getSources(project).getSourceGroups(JavaProjectConstants.SOURCES_TYPE_JAVA)) {
             try {

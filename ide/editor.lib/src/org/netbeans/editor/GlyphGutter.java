@@ -58,6 +58,8 @@ import javax.accessibility.*;
 import javax.swing.Icon;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.Caret;
 import javax.swing.text.Document;
@@ -108,14 +110,20 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
     
     /** Foreground color of the gutter. Used for drawing line numbers. */
     private Color foreColor;
-    
+
+    /** Foreground color used for drawing the active (current caret) line number. */
+    private Color activeForeColor;
+
     /** Font used for drawing line numbers */
     private Font font;
-    
+
+    /** Currently active (caret) line index, or -1 if unknown. */
+    private int currentCaretLine = -1;
+
     /** Flag whether the gutter was initialized or not. The painting is disabled till the
      * gutter is not initialized */
     private boolean init;
-    
+
     /** Width of the glyph gutter*/ 
     private int glyphGutterWidth;
 
@@ -128,12 +136,12 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
     /** Predefined left area width - area between left border of the number
      *  and the left border of the glyphgutter
      */
-    private static final int leftGap= 10;
+    private static final int leftGap = 10;
 
     /** Predefined right area width - area between right border of the number
      *  and the right border of the glyphgutter
      */
-    private static final int rightGap= 4;
+    private static final int rightGap = 8;
     
     /** Whether the line numbers are shown or not */
     private boolean showLineNumbers = true;
@@ -156,6 +164,8 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
     private PropertyChangeListener annoTypesListener;
     private PropertyChangeListener editorUIListener;
     private GutterMouseListener gutterMouseListener;
+    private ChangeListener caretListener;
+    private Caret attachedCaret;
 
     private ColoringMap coloringMap;
     private final PropertyChangeListener coloringMapListener = new PropertyChangeListener() {
@@ -260,12 +270,18 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
         getAccessibleContext().setAccessibleName(NbBundle.getBundle(BaseKit.class).getString("ACSN_Glyph_Gutter")); // NOI18N
         getAccessibleContext().setAccessibleDescription(NbBundle.getBundle(BaseKit.class).getString("ACSD_Glyph_Gutter")); // NOI18N
 
-        // add mouse listener for cycling button
-        // TODO: clicking the line number should select whole line
-        // TODO: clicking the line number abd dragging the mouse should select block of lines
+        // add mouse listener for cycling button and line selection
         gutterMouseListener = new GutterMouseListener ();
         addMouseListener (gutterMouseListener);
         addMouseMotionListener (gutterMouseListener);
+
+        caretListener = new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                updateCurrentCaretLine();
+            }
+        };
+        attachCaretListener(editorUI.getComponent());
 
         AnnotationTypes.getTypes().addPropertyChangeListener( annoTypesListener = new PropertyChangeListener() {
             public @Override void propertyChange (PropertyChangeEvent evt) {
@@ -324,6 +340,14 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
             foreColor = lineColoring.getForeColor();
         else
             foreColor = defaultColoring.getForeColor();
+
+        Color customActiveFg = UIManager.getColor("NbEditorGlyphGutter.activeLineForeground"); //NOI18N
+        if (customActiveFg != null) {
+            activeForeColor = customActiveFg;
+        } else {
+            Color defFg = defaultColoring.getForeColor();
+            activeForeColor = (defFg != null) ? defFg : foreColor;
+        }
     
         Font lineFont;
         if (lineColoring.getFont() != null) {
@@ -331,7 +355,9 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
             lineFont = (f != null) ? f.deriveFont((float)f.getSize()-1) : null;
         } else {
             lineFont = defaultColoring.getFont();
-            lineFont = new Font("Monospaced", Font.PLAIN, lineFont.getSize()-1); //NOI18N
+            lineFont = (lineFont != null)
+                    ? lineFont.deriveFont(Font.PLAIN, (float) lineFont.getSize() - 1)
+                    : new Font("Monospaced", Font.PLAIN, 12); //NOI18N
         }
         
         JTextComponent tc = eui.getComponent();
@@ -465,8 +491,6 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
         return (int)comp.getSize().getHeight(); // + highestLineNumber * eui.getLineHeight()
     }
     
-    private static final Color DEFAULT_GUTTER_LINE = UIManager.getColor("controlShadow");
-    
     /** Paint the gutter itself */
     public @Override void paintComponent(final Graphics g) {
         super.paintComponent(g);
@@ -495,10 +519,6 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
       
         g.setColor(getBackground());
         g.fillRect(clip.x, clip.y, clip.width, clip.height);
-        
-        //painting gutter line
-        g.setColor(DEFAULT_GUTTER_LINE);
-        g.drawLine(glyphGutterWidth-1, clip.y, glyphGutterWidth-1, clip.height + clip.y);
 
         final Document doc = component.getDocument();
         doc.render(new Runnable() {
@@ -513,6 +533,9 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
                         int repaintWidth = (int) getSize().getWidth();
                         int endRepaintY = clip.y + clip.height;
                         Element lineElementRoot = doc.getDefaultRootElement();
+                        Caret caret = component.getCaret();
+                        int activeLine = (caret != null) ? lineElementRoot.getElementIndex(caret.getDot()) : currentCaretLine;
+                        currentCaretLine = activeLine;
                         ParagraphViewDescriptor pViewDesc = lockedVH.getParagraphViewDescriptor(pViewIndex);
                         int pViewStartOffset = pViewDesc.getStartOffset();
                         int lineIndex = lineElementRoot.getElementIndex(pViewStartOffset);
@@ -580,7 +603,14 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
                                     // or other complexities where TextLayout would be useful.
                                     int x = glyphGutterWidth - lineNumberWidth - rightGap;
                                     int y = (int) Math.round(pViewRect.y + pViewDesc.getAscent());
+                                    boolean isActiveLine = (lineIndex == activeLine);
+                                    if (isActiveLine && activeForeColor != null) {
+                                        g.setColor(activeForeColor);
+                                    }
                                     g.drawString(lineNumberString, x, y);
+                                    if (isActiveLine && activeForeColor != null) {
+                                        g.setColor(foreColor);
+                                    }
                                     if (LOG.isLoggable(Level.FINER)) {
                                         LOG.finer("GlyphGutter: drawString: \"" + lineNumberString + "\" x=" + // NOI18N
                                                 x + ", y=" + y + "\n"); // NOI18N
@@ -598,16 +628,41 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
                                     }
                                 }
 
-                                if (annoGlyph != null) {
+                                // Suggestions belong to the active line; errors, warnings and
+                                // debugger annotations remain visible throughout the file.
+                                String annotationType = annoDesc == null ? "" : annoDesc.getAnnotationType();
+                                boolean suggestion = annotationType.startsWith("org-netbeans-spi-editor-hints-")
+                                        && (annotationType.contains("_hint")
+                                            || annotationType.contains("_todo"));
+                                if (annoGlyph != null && (!suggestion || lineIndex == currentCaretLine || annoCount > 1)) {
                                     int glyphHeight = annoGlyph.getHeight(null);
                                     // draw the glyph only when the annotation type has its own icon (no the default one)
                                     // or in case there is more than one annotations on the line
                                     if (!(annoCount == 1 && annoDesc.isDefaultGlyph())) {
-                                        // Draw as Icon to get full resolution for SVG icons.
-                                        Icon annoGlyphIcon = ImageUtilities.image2Icon(annoGlyph);
-                                        annoGlyphIcon.paintIcon(null, g,
-                                                xPos,
-                                                (int) Math.round(pViewRect.y + (rowHeight - glyphHeight) / 2 + 1));
+                                        Color breakpointColor = UIManager.getColor("NbEditorGlyphGutter.breakpointColor"); // NOI18N
+                                        // Only replace the ordinary enabled line breakpoint. Keep
+                                        // conditional, disabled and execution glyphs recognizable.
+                                        if (breakpointColor != null && "Breakpoint".equals(annoDesc.getAnnotationType())
+                                                && g instanceof Graphics2D) {
+                                            Graphics2D marker = (Graphics2D) g.create();
+                                            try {
+                                                marker.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                                                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                                                marker.setColor(breakpointColor);
+                                                marker.fillOval(xPos + 3,
+                                                        (int) Math.round(pViewRect.y + (rowHeight - 10) / 2), 10, 10);
+                                                marker.fillRect(getWidth() - 2, (int) Math.round(pViewRect.y),
+                                                        2, (int) Math.ceil(rowHeight));
+                                            } finally {
+                                                marker.dispose();
+                                            }
+                                        } else {
+                                            // Draw as Icon to get full resolution for SVG icons.
+                                            Icon annoGlyphIcon = ImageUtilities.image2Icon(annoGlyph);
+                                            annoGlyphIcon.paintIcon(null, g,
+                                                    xPos,
+                                                    (int) Math.round(pViewRect.y + (rowHeight - glyphHeight) / 2 + 1));
+                                        }
                                     }
 
                                     // draw cycling button if there is more than one annotations on the line
@@ -834,6 +889,58 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
         return glyph;
     }
     
+    private void attachCaretListener(JTextComponent tc) {
+        if (attachedCaret != null && caretListener != null) {
+            attachedCaret.removeChangeListener(caretListener);
+            attachedCaret = null;
+        }
+        if (tc != null && caretListener != null) {
+            Caret c = tc.getCaret();
+            if (c != null) {
+                c.addChangeListener(caretListener);
+                attachedCaret = c;
+            }
+        }
+    }
+
+    private void updateCurrentCaretLine() {
+        EditorUI eui = editorUI;
+        if (!init || !showLineNumbers || eui == null) {
+            return;
+        }
+        JTextComponent component = eui.getComponent();
+        BaseDocument doc = eui.getDocument();
+        if (component == null || doc == null) {
+            return;
+        }
+        Caret caret = component.getCaret();
+        if (caret == null) {
+            return;
+        }
+        int newLine = -1;
+        doc.readLock();
+        try {
+            int dot = caret.getDot();
+            if (dot >= 0 && dot <= doc.getLength()) {
+                newLine = LineDocumentUtils.getLineIndex(doc, dot);
+            }
+        } catch (BadLocationException ex) {
+            // ignore
+        } finally {
+            doc.readUnlock();
+        }
+        int oldLine = currentCaretLine;
+        if (newLine != oldLine) {
+            currentCaretLine = newLine;
+            if (oldLine >= 0) {
+                changedLine(oldLine);
+            }
+            if (newLine >= 0) {
+                changedLine(newLine);
+            }
+        }
+    }
+
     private int getLineFromMouseEvent(MouseEvent e){
         int line = -1;
         EditorUI eui = editorUI;
@@ -878,15 +985,19 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
             EditorUI eui = editorUI;
             if (eui==null)
                 return;
+            // A double click is one toggle, not a removal followed by an add.
+            if (e.getClickCount() > 1) {
+                return;
+            }
             // cycling button was clicked by left mouse button
             if (e.getModifiers() == InputEvent.BUTTON1_MASK) {
-                if (isMouseOverCycleButton(e)) {
+                if (isMouseOverCycleButton(e) && annos.getNumberOfAnnotations(getLineFromMouseEvent(e)) > 1) {
                     int line = getLineFromMouseEvent(e);
                     e.consume();
                     annos.activateNextAnnotation(line);
                 } else {
                     Action actions[] = ImplementationProvider.getDefault().getGlyphGutterActions(eui.getComponent());
-                    if (actions == null && actions.length == 0) {
+                    if (actions == null || actions.length == 0) {
                         Toolkit.getDefaultToolkit().beep();
                         return;
                     }
@@ -936,6 +1047,10 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
                         }
                     }
                     toInvoke = toInvoke != null ? toInvoke : defaultAction;
+                    if (toInvoke instanceof org.openide.util.ContextAwareAction contextAction
+                            && active instanceof org.openide.util.Lookup.Provider provider) {
+                        toInvoke = contextAction.createContextAwareInstance(provider.getLookup());
+                    }
                     if (toInvoke != null && toInvoke.isEnabled()){
                         BaseDocument document = eui.getDocument();
                         try {
@@ -1101,6 +1216,7 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
                         if (annoTypesListener !=null){
                             AnnotationTypes.getTypes().removePropertyChangeListener(annoTypesListener);
                         }
+                        attachCaretListener(null);
                         editorUI = null;
                         annos = null;
                     }
@@ -1115,6 +1231,9 @@ public class GlyphGutter extends JComponent implements Annotations.AnnotationsLi
                     annos.addAnnotationsListener(GlyphGutter.this);
 
                     update();
+                } else if ("caret".equals(evt.getPropertyName())) { //NOI18N
+                    attachCaretListener((JTextComponent) evt.getSource());
+                    updateCurrentCaretLine();
                 } else if (TEXT_ZOOM_PROPERTY.equals(evt.getPropertyName())) {
                     update();
                 } else if ("font".equals(evt.getPropertyName())) {

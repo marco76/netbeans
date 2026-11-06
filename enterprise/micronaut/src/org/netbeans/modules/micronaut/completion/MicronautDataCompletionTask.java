@@ -67,6 +67,7 @@ import org.netbeans.modules.micronaut.expression.MicronautExpressionLanguagePars
 import org.netbeans.modules.parsing.api.ParserManager;
 import org.netbeans.modules.parsing.api.ResultIterator;
 import org.netbeans.modules.parsing.api.Source;
+import org.netbeans.modules.micronaut.spring.SpringDataCompletionHelper;
 import org.netbeans.modules.parsing.api.UserTask;
 import org.netbeans.modules.parsing.spi.ParseException;
 import org.netbeans.spi.editor.completion.CompletionItem;
@@ -85,14 +86,16 @@ public class MicronautDataCompletionTask {
     private static final String CONTROLLER_ANNOTATION_NAME = "io.micronaut.http.annotation.Controller";
     private static final String QUERY_ANNOTATION_TYPE_NAME = "io.micronaut.data.annotation.Query";
     private static final String GET = "get";
-    private static final List<String> QUERY_PATTERNS = Arrays.asList("find", "get", "query", "read", "retrieve", "search");
+    private static final List<String> QUERY_PATTERNS = Arrays.asList("find", "get", "query", "read", "retrieve", "search", "stream");
     private static final List<String> SPECIAL_QUERY_PATTERNS = Arrays.asList("count", "countDistinct", "delete", "eliminate", "erase", "exists", "remove",  "update");
     private static final List<String> INSERT_QUERY_PATTERNS = Arrays.asList("insert", "persist", "save", "store");
-    private static final List<String> QUERY_PROJECTIONS = Arrays.asList("", "Avg", "Distinct", "Max", "Min", "Sum");
-    private static final List<String> CRITERION_EXPRESSIONS = Arrays.asList("", "After", "Before", "Contains", "StartingWith", "StartsWith", "EndingWith", "EndsWith",
-            "Equal", "Equals", "NotEqual", "NotEquals", "GreaterThan", "GreaterThanEquals", "LessThan", "LessThanEquals", "Like", "Ilike", "In", "InList", "InRange", "Between",
-            "IsNull", "IsNotNull", "IsEmpty", "IsNotEmpty", "True", "False");
+    private static final List<String> QUERY_PROJECTIONS = Arrays.asList("", "Avg", "Distinct", "First", "Max", "Min", "Sum", "Top");
+    private static final List<String> CRITERION_EXPRESSIONS = Arrays.asList("", "After", "Before", "Contains", "Containing", "StartingWith", "StartsWith", "EndingWith", "EndsWith",
+            "Is", "Equal", "Equals", "NotEqual", "NotEquals", "GreaterThan", "GreaterThanEqual", "GreaterThanEquals", "LessThan", "LessThanEqual", "LessThanEquals",
+            "Like", "NotLike", "Ilike", "In", "NotIn", "InList", "InRange", "Between",
+            "IsNull", "Null", "IsNotNull", "NotNull", "IsEmpty", "IsNotEmpty", "True", "False", "IgnoreCase");
     private static final List<String> COMPOSE_EXPRESSIONS = Arrays.asList("And", "Or");
+    private static final List<String> ORDER_DIRECTIONS = Arrays.asList("Asc", "Desc");
     private static final String BY = "By";
     private static final String ORDER_BY = "OrderBy";
     private static final String COUNT = "count";
@@ -225,9 +228,10 @@ public class MicronautDataCompletionTask {
     private <T> void resolveQueryAnnotation(CompilationInfo info, TreePath path, String prefix, int off, ItemFactory<T> factory, Consumer<T> consumer) {
         Element el = info.getTrees().getElement(path);
         if (el instanceof TypeElement) {
-            if (QUERY_ANNOTATION_TYPE_NAME.contentEquals(((TypeElement) el).getQualifiedName())) {
+            boolean isSpringSqlQuery = SpringDataCompletionHelper.isSpringSqlQuery(info, path, (TypeElement) el);
+            if (isSpringSqlQuery || QUERY_ANNOTATION_TYPE_NAME.contentEquals(((TypeElement) el).getQualifiedName())) {
                 TreePath clsPath = info.getTreeUtilities().getPathElementOfKind(TreeUtilities.CLASS_TREE_KINDS, path);
-                if (clsPath != null && Utils.getAnnotation(info.getTrees().getElement(clsPath).getAnnotationMirrors(), JDBC_REPOSITORY_ANNOTATION_NAME) != null) {
+                if (clsPath != null && (isSpringSqlQuery || Utils.getAnnotation(info.getTrees().getElement(clsPath).getAnnotationMirrors(), JDBC_REPOSITORY_ANNOTATION_NAME) != null)) {
                     SQLCompletionContext ctx = SQLCompletionContext.empty()
                             .setStatement(prefix)
                             .setOffset(off)
@@ -283,7 +287,7 @@ public class MicronautDataCompletionTask {
         if (entity != null) {
             TypeUtilities tu = info.getTypeUtilities();
             Map<String, String> prop2Types = new LinkedHashMap<>();
-            for (VariableElement variableElement : ElementFilter.fieldsIn(entity.getEnclosedElements())) {
+            for (VariableElement variableElement : SpringDataCompletionHelper.getEntityFields(entity)) {
                 TypeMirror type = variableElement.asType();
                 if (type.getKind() != TypeKind.ERROR) {
                     String name = variableElement.getSimpleName().toString();
@@ -367,7 +371,14 @@ public class MicronautDataCompletionTask {
         }
         for (String propName : prop2Types.keySet()) {
             String name = ORDER_BY + propName;
-            if (prefix.length() < namePrefix.length() + name.length() && Utils.startsWith(namePrefix + name, prefix)) {
+            if (prefix.length() >= namePrefix.length() + name.length() && prefix.startsWith(namePrefix + name)) {
+                for (String dir : ORDER_DIRECTIONS) {
+                    if (prefix.length() < namePrefix.length() + name.length() + dir.length() && Utils.startsWith(namePrefix + name + dir, prefix)) {
+                        consumer.accept(returnType != null ? factory.createFinderMethodItem(namePrefix + name + dir, returnType, anchorOffset)
+                                : factory.createFinderMethodNameItem(namePrefix + name, dir, anchorOffset));
+                    }
+                }
+            } else if (prefix.length() < namePrefix.length() + name.length() && Utils.startsWith(namePrefix + name, prefix)) {
                 consumer.accept(returnType != null ? factory.createFinderMethodItem(namePrefix + name, returnType, anchorOffset)
                         : factory.createFinderMethodNameItem(namePrefix, name, anchorOffset));
             }
@@ -386,7 +397,7 @@ public class MicronautDataCompletionTask {
                 }
             }
             Map<String, VariableElement> prop2fields = new LinkedHashMap<>();
-            for (VariableElement variableElement : ElementFilter.fieldsIn(entity.getEnclosedElements())) {
+            for (VariableElement variableElement : SpringDataCompletionHelper.getEntityFields(entity)) {
                 String name = variableElement.getSimpleName().toString();
                 if (!paramNames.contains(name)) {
                     TypeMirror type = variableElement.asType();
@@ -455,7 +466,7 @@ public class MicronautDataCompletionTask {
                 }
             }
         }
-        return null;
+        return SpringDataCompletionHelper.getSpringEntityFor(info, te);
     }
 
     private static TokenSequence<JavaTokenId> findLastNonWhitespaceToken(TokenSequence<JavaTokenId> ts, int startPos, int endPos) {

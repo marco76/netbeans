@@ -47,6 +47,21 @@ class ObjectProviders {
         public SpringBeanImpl createObject(AnnotationModelHelper helper, TypeElement typeElement) {
             return new SpringBeanImpl(helper, typeElement);
         }
+
+        @Override
+        public List<SpringBeanImpl> createInitialObjects() throws InterruptedException {
+            return SpringBeanMethodSupport.createInitialObjects(getHelper(), this);
+        }
+
+        @Override
+        public List<SpringBeanImpl> createObjects(TypeElement type) {
+            return SpringBeanMethodSupport.createObjects(getHelper(), this, type);
+        }
+
+        @Override
+        public boolean modifyObjects(TypeElement type, List<SpringBeanImpl> objects) {
+            return SpringBeanMethodSupport.modifyObjects(getHelper(), this, type, objects);
+        }
     }
 
     private abstract static class AbstractProvider<T extends Refreshable> implements ObjectProvider<T> {
@@ -57,6 +72,10 @@ class ObjectProviders {
         AbstractProvider(AnnotationModelHelper helper, Set<String> annotationTypeNames) {
             this.annotationTypeNames = annotationTypeNames;
             this.helper = helper;
+        }
+
+        protected AnnotationModelHelper getHelper() {
+            return helper;
         }
 
         @Override

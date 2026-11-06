@@ -1,0 +1,37 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#if project?? && project.licensePath??>
+<#include "${project.licensePath}">
+
+</#if>
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+<#if imports??>
+<#list imports as imp>
+import ${imp};
+</#list>
+
+</#if>
+/**
+ * Spring Data repository for {@link ${entitySimpleName}}.
+<#if user??>
+ *
+ * @author ${user}
+</#if>
+ */
+<#if addRepositoryAnnotation?? && addRepositoryAnnotation>
+@Repository
+</#if>
+<#if useRepositoryDefinition?? && useRepositoryDefinition>
+@RepositoryDefinition(domainClass = ${entitySimpleName}.class, idClass = ${idSimpleName}.class)
+</#if>
+public interface ${name}<#if extendsClause?? && extendsClause != ""> extends ${extendsClause}</#if> {
+<#if sampleMethods??>
+<#list sampleMethods as methodLine>
+${methodLine}
+</#list>
+</#if>
+}

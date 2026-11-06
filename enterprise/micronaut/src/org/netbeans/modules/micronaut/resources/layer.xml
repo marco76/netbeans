@@ -27,6 +27,7 @@
                 <folder name="AnnotationProcessors">
                     <file name="org-netbeans-modules-micronaut-completion-MicronautJavaConfigPropertiesCompletion.instance"/>
                     <file name="org-netbeans-modules-micronaut-completion-MicronautJavaMappingPropertiesCompletion.instance"/>
+                    <file name="org-netbeans-modules-micronaut-spring-SpringBootJavaCompletionProcessor.instance"/>
                 </folder>
             </folder>
             <folder name="x-yaml">
@@ -76,6 +77,12 @@
                     <attr name="goals" stringvalue="run"/>
                 </file>
                 <file name="io.micronaut.build:micronaut-maven-plugin">
+                    <attr name="goals" stringvalue="run"/>
+                </file>
+                <file name="spring-boot">
+                    <attr name="alias" stringvalue="./org.springframework.boot:spring-boot-maven-plugin"/>
+                </file>
+                <file name="org.springframework.boot:spring-boot-maven-plugin">
                     <attr name="goals" stringvalue="run"/>
                 </file>
             </folder>
@@ -200,6 +207,7 @@
         <folder name="rules">
             <folder name="errors">
                 <file name="org-netbeans-modules-micronaut-hints-AddArgForRouteVar.instance"/>
+                <file name="org-netbeans-modules-micronaut-spring-SpringAnnotationExplanation.instance"/>
             </folder>
         </folder>
     </folder>

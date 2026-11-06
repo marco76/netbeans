@@ -111,6 +111,16 @@ public class MavenProjectNode extends AbstractNode {
         if (!project.isMavenProjectLoaded()) {
             return null;
         }
+        if (NbMavenProject.isErrorPlaceholder(project.getOriginalMavenProject())) {
+            try {
+                String color = javax.swing.UIManager.getColor("nb.projecttree.secondaryForeground") != null
+                        ? "nb.projecttree.secondaryForeground" : "textInactiveText";
+                return XMLUtil.toElementContent(project.getProjectDirectory().getNameExt())
+                        + " <font color='!" + color + "'>" + LBL_Unavailable() + "</font>";
+            } catch (CharConversionException ex) {
+                return null;
+            }
+        }
         String packaging = project.getOriginalMavenProject().getPackaging();
         if (project.getLookup().lookup(SpecialIcon.class) != null) {
             return null;
@@ -142,6 +152,7 @@ public class MavenProjectNode extends AbstractNode {
     }
 
     @Messages({
+        "LBL_Unavailable=Unavailable",
         "TXT_FailedProjectLoadingDesc=This project could not be loaded by the NetBeans Connector. "
             + "That usually means something is wrong with your pom.xml, or plugins are missing. "
             + "Select \"Show and Resolve Problems\" from the project's context menu for additional information.",

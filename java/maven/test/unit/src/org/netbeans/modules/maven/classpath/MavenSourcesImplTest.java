@@ -45,6 +45,23 @@ public class MavenSourcesImplTest extends NbTestCase {
         d = FileUtil.toFileObject(getWorkDir());
     }
 
+    public void testSourcesRemainVisibleWithBrokenPom() throws Exception {
+        TestFileUtils.writeFile(d, "pom.xml", "<project><broken>");
+        FileObject main = FileUtil.createFolder(d, "src/main/java");
+        FileObject test = FileUtil.createFolder(d, "src/test/java");
+        Project project = ProjectManager.getDefault().findProject(d);
+        assertNotNull(project);
+        SourceGroup[] groups = ProjectUtils.getSources(project)
+                .getSourceGroups(JavaProjectConstants.SOURCES_TYPE_JAVA);
+        assertEquals(2, groups.length);
+        java.util.Set<FileObject> roots = new java.util.HashSet<>();
+        for (SourceGroup group : groups) {
+            roots.add(group.getRootFolder());
+        }
+        assertTrue(roots.contains(main));
+        assertTrue(roots.contains(test));
+    }
+
     public void testITSourceGroups() throws Exception {
         TestFileUtils.writeFile(d,
                 "pom.xml", 

@@ -1,0 +1,54 @@
+<#assign licenseFirst = "/*">
+<#assign licensePrefix = " * ">
+<#assign licenseLast = " */">
+<#if project?? && project.licensePath??>
+<#include "${project.licensePath}">
+
+</#if>
+<#if package?? && package != "">
+package ${package};
+
+</#if>
+<#if imports??>
+<#list imports as imp>
+import ${imp};
+</#list>
+<#else>
+import org.springframework.context.annotation.Configuration;
+</#if>
+
+/**
+ * Spring Java Configuration class.
+<#if user??>
+ *
+ * @author ${user}
+</#if>
+ */
+@Configuration
+<#if componentScan?? && componentScan>
+<#if componentScanValue?? && componentScanValue != "">
+@ComponentScan(${componentScanValue})
+<#else>
+@ComponentScan
+</#if>
+</#if>
+<#if propertySourceValue?? && propertySourceValue != "">
+@PropertySource(${propertySourceValue})
+</#if>
+<#if importClassesValue?? && importClassesValue != "">
+@Import(${importClassesValue})
+</#if>
+<#if enableAnnotations??>
+<#list enableAnnotations as ann>
+@${ann}
+</#list>
+</#if>
+public class ${name} {
+<#if generateSampleBean?? && generateSampleBean>
+
+    // @Bean
+    // public MyService myService() {
+    //     return new MyServiceImpl();
+    // }
+</#if>
+}

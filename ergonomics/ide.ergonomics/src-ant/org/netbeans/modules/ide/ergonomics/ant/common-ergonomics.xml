@@ -63,6 +63,10 @@
         <mkdir dir="${xmldir}"/>
         <createmodulexml xmldir="${xmldir}">
             <disabled dir="${cluster.to.process}">
+                <!-- AlpLibre's connection view and Spring/Micronaut endpoint provider
+                     are available immediately, including in fresh user profiles. -->
+                <exclude name="modules/org-netbeans-modules-fullstack.jar"/>
+                <exclude name="modules/org-netbeans-modules-micronaut.jar"/>
                 <and>
                     <filename name="modules/*.jar"/>
                     <custom

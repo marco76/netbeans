@@ -19,18 +19,23 @@
 package org.netbeans.modules.editor.breadcrumbs;
 
 import java.awt.AWTEvent;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.LayoutManager;
 import java.awt.Point;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.AWTEventListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Path2D;
 import java.beans.BeanInfo;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
@@ -66,19 +71,32 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
 
     private final Icon SEPARATOR =
         ImageUtilities.image2Icon(ImageUtilities.loadImage("org/netbeans/modules/editor/breadcrumbs/resources/separator.png"));
-    
+    private int hoveredIndex = -1;
+
     public BreadCrumbComponent() {
         setPreferredSize(new Dimension(0, COMPONENT_HEIGHT));
-        addMouseListener(new MouseAdapter() {
+        MouseAdapter mouseAdapter = new MouseAdapter() {
             @Override public void mouseClicked(MouseEvent e) {
                 expand(e);
             }
-        });
+            @Override public void mouseMoved(MouseEvent e) {
+                updateHoveredIndex(e.getX());
+            }
+            @Override public void mouseExited(MouseEvent e) {
+                if (hoveredIndex != -1) {
+                    hoveredIndex = -1;
+                    setCursor(Cursor.getDefaultCursor());
+                    repaint();
+                }
+            }
+        };
+        addMouseListener(mouseAdapter);
+        addMouseMotionListener(mouseAdapter);
     }
 
-    private static final int USABLE_HEIGHT = 19;
-    private static final int LEFT_SEPARATOR_INSET = 2;
-    private static final int RIGHT_SEPARATOR_INSET = 10;
+    private static final int USABLE_HEIGHT = 24;
+    private static final int LEFT_SEPARATOR_INSET = 4;
+    private static final int RIGHT_SEPARATOR_INSET = 6;
     private static final int ICON_TEXT_SEPARATOR = 5;
     private static final int START_INSET = 8;
     private static final int MAX_ROWS_IN_POP_UP = 20;
@@ -120,14 +138,38 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
         int height = getHeight();
         
         if (nodes.length == 0) {
-            SEPARATOR.paintIcon(this, g, START_INSET, (height - SEPARATOR.getIconHeight()) / 2);
+            paintChevron(g, START_INSET, height);
             return ;
         }
         
         int x = START_INSET;
 
+        Color hoverBg = UIManager.getColor("Button.toolbar.hoverBackground"); // NOI18N
+        if (hoverBg == null) {
+            hoverBg = UIManager.getColor("EditorTab.hoverBackground"); // NOI18N
+        }
+        Color defaultFg = UIManager.getColor("Label.foreground"); // NOI18N
+        Color mutedFg = UIManager.getColor("Label.disabledForeground"); // NOI18N
+
         for (int i = 0; i < nodes.length; i++) {
+            boolean isHovered = (i == hoveredIndex);
+            boolean isLast = (i == nodes.length - 1);
+            if (isHovered && hoverBg != null && g instanceof Graphics2D) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2d.setColor(hoverBg);
+                g2d.fillRoundRect(x - 4, 2, sizes[i] + LEFT_SEPARATOR_INSET + SEPARATOR.getIconWidth() + 6, height - 4, 6, 6);
+                g2d.dispose();
+            }
+
             configureForNode(nodes[i]);
+            if (isHovered || isLast) {
+                if (defaultFg != null) {
+                    renderer.setForeground(defaultFg);
+                }
+            } else if (mutedFg != null) {
+                renderer.setForeground(mutedFg);
+            }
             Dimension preferred = renderer.getPreferredSize();
             int labelY = (height - preferred.height) / 2;
             g.translate(x, labelY);
@@ -137,9 +179,55 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
 
             x += sizes[i];
 
-            SEPARATOR.paintIcon(this, g, x + LEFT_SEPARATOR_INSET, (height - SEPARATOR.getIconHeight()) / 2);
+            paintChevron(g, x + LEFT_SEPARATOR_INSET, height);
 
             x += LEFT_SEPARATOR_INSET + SEPARATOR.getIconWidth() + RIGHT_SEPARATOR_INSET;
+        }
+    }
+
+    private void paintChevron(Graphics g, int x, int height) {
+        if (g instanceof Graphics2D) {
+            Graphics2D g2d = (Graphics2D) g.create();
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+            Color chevronColor = UIManager.getColor("Label.disabledForeground"); // NOI18N
+            if (chevronColor == null) {
+                chevronColor = Color.GRAY;
+            }
+            g2d.setColor(chevronColor);
+            g2d.setStroke(new BasicStroke(1.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            double midY = height / 2.0;
+            double cx = x + SEPARATOR.getIconWidth() / 2.0 - 1.5;
+            Path2D.Double path = new Path2D.Double();
+            path.moveTo(cx, midY - 3.5);
+            path.lineTo(cx + 3.5, midY);
+            path.lineTo(cx, midY + 3.5);
+            g2d.draw(path);
+            g2d.dispose();
+        } else {
+            SEPARATOR.paintIcon(this, g, x, (height - SEPARATOR.getIconHeight()) / 2);
+        }
+    }
+
+    private void updateHoveredIndex(int mouseX) {
+        int newHover = -1;
+        if (sizes != null) {
+            int elemX = START_INSET;
+            for (int i = 0; i < sizes.length; i++) {
+                int endX = elemX + sizes[i] + LEFT_SEPARATOR_INSET + SEPARATOR.getIconWidth();
+                if (mouseX >= elemX - 2 && mouseX <= endX + 2) {
+                    newHover = i;
+                    break;
+                }
+                elemX = endX + RIGHT_SEPARATOR_INSET;
+            }
+        }
+        if (newHover != hoveredIndex) {
+            hoveredIndex = newHover;
+            setCursor(hoveredIndex != -1
+                    ? Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+                    : Cursor.getDefaultCursor());
+            repaint();
         }
     }
 
@@ -189,6 +277,9 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
         int clickX = e.getPoint().x;
         int elemX = START_INSET;
 
+        if (sizes == null) {
+            measurePrepaint();
+        }
         for (int i = 0; i < sizes.length; i++) {
             int startX = elemX;
             elemX += sizes[i];
@@ -233,7 +324,9 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
             sel = sel.getParentNode();
         }
 
-        path.remove(path.size() - 1); //XXX
+        if (!path.isEmpty()) {
+            path.remove(path.size() - 1); // synthetic root
+        }
 
         Collections.reverse(path);
         
@@ -262,7 +355,14 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
             }
         }
         final JPanel expanded = new Expanded(new BorderLayout());
-        expanded.setBorder(new LineBorder(Color.BLACK, 1));
+        Color popupBorderColor = UIManager.getColor("PopupMenu.borderColor"); // NOI18N
+        if (popupBorderColor == null) {
+            popupBorderColor = UIManager.getColor("Component.borderColor"); // NOI18N
+        }
+        if (popupBorderColor == null) {
+            popupBorderColor = Color.GRAY;
+        }
+        expanded.setBorder(new LineBorder(popupBorderColor, 1));
         
         final ListView listView = new ListView() {
             {
@@ -354,7 +454,8 @@ public class BreadCrumbComponent<T extends JLabel&Renderer> extends JComponent i
             renderer.setHtml(false);
             renderer.setText(node.getDisplayName());
         }
-        renderer.setFont(getFont());
+        java.awt.Font font = UIManager.getFont("Label.font");
+        renderer.setFont(font != null ? font : getFont());
     }
     
 }

@@ -59,6 +59,25 @@ public abstract class AndroidBrowserFactory implements EnhancedBrowserFactory, H
     }
 
     @Override
+    public boolean isTargetAvailable() {
+        AndroidPlatform platform = AndroidPlatform.getDefault();
+        if (!platform.isReady()) return false;
+        try {
+            String devices = org.netbeans.modules.cordova.platforms.api.ProcessUtilities.callProcess(
+                    platform.getAdbCommand(), true, 5000, "devices"); // NOI18N
+            boolean emulator = getId().equals(AndroidBrowser.Kind.ANDROID_EMULATOR_DEFAULT.toString());
+            for (String line : devices.split("\\R")) {
+                String[] fields = line.trim().split("\\s+");
+                if (fields.length == 2 && "device".equals(fields[1])
+                        && fields[0].startsWith("emulator-") == emulator) return true;
+            }
+        } catch (java.io.IOException ex) {
+            // A missing SDK or unavailable adb simply hides this target.
+        }
+        return false;
+    }
+
+    @Override
     public BrowserURLMapperImplementation getBrowserURLMapper() {
         return urlMapper;
     }

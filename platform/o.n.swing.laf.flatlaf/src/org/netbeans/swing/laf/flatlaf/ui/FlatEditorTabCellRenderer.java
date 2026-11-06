@@ -29,6 +29,7 @@ import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.Polygon;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.font.FontRenderContext;
 import javax.swing.Icon;
 import javax.swing.JComponent;
@@ -78,6 +79,7 @@ public class FlatEditorTabCellRenderer extends AbstractTabCellRenderer {
     private static final int CLOSE_ICON_RIGHT_PAD = tabInsets.left - 2;
 
     private static final boolean showSelectedTabBorder = Utils.getUIBoolean("EditorTab.showSelectedTabBorder", underlineAtTop); // NOI18N
+    private static final boolean showCloseButtonOnUnselectedTabs = Utils.getUIBoolean("EditorTab.showCloseButtonOnUnselectedTabs", false); // NOI18N
     private static final boolean unscaledBorders = Utils.getUIBoolean("EditorTab.unscaledBorders", false); // NOI18N
 
     private static final FlatTabPainter leftClipPainter = new FlatTabPainter(true, false);
@@ -272,6 +274,9 @@ public class FlatEditorTabCellRenderer extends AbstractTabCellRenderer {
                     if (!rightClip) {
                         g.fillRect(width - tabSeparatorWidth - contentBorderWidth, 0, contentBorderWidth, height); // Right
                     }
+                } else if (!underlineAtTop) {
+                    g.setColor(contentBorderColor);
+                    g.fillRect(0, height - contentBorderWidth, width, contentBorderWidth);
                 }
 
                 if (underlineHeight > 0) {
@@ -280,7 +285,7 @@ public class FlatEditorTabCellRenderer extends AbstractTabCellRenderer {
                     if (underlineAtTop) {
                         g.fillRect(0, 0, width - tabSeparatorWidth, underlineHeight);
                     } else {
-                        g.fillRect(0, height - underlineHeight, width - tabSeparatorWidth, underlineHeight);
+                        g.fillRoundRect(0, height - underlineHeight, width - tabSeparatorWidth, underlineHeight, underlineHeight, underlineHeight);
                     }
                 }
             } else {
@@ -296,6 +301,11 @@ public class FlatEditorTabCellRenderer extends AbstractTabCellRenderer {
             }
         }
 
+        private static boolean isTabModified(FlatEditorTabCellRenderer ren) {
+            String text = ren.getText();
+            return text != null && (text.contains("<b>") || text.contains("<B>")); // NOI18N
+        }
+
         private void paintCloseButton(Graphics g, FlatEditorTabCellRenderer ren) {
             //Get the close button bounds, more or less
             Rectangle r = new Rectangle();
@@ -304,6 +314,20 @@ public class FlatEditorTabCellRenderer extends AbstractTabCellRenderer {
                                                           ren.getHeight()));
 
             if (!g.hitClip(r.x, r.y, r.width, r.height)) {
+                return;
+            }
+
+            if (!showCloseButtonOnUnselectedTabs && !ren.isSelected() && !ren.isArmed() && !ren.inCloseButton()) {
+                if (isTabModified(ren) && g instanceof Graphics2D) {
+                    int dotSize = UIScale.scale(6);
+                    int dx = r.x + (r.width - dotSize) / 2;
+                    int dy = r.y + (r.height - dotSize) / 2;
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2d.setColor(ren.getForeground());
+                    g2d.fillOval(dx, dy, dotSize, dotSize);
+                    g2d.dispose();
+                }
                 return;
             }
 

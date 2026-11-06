@@ -26,6 +26,11 @@
             <code-name-base>org.netbeans.modules.micronaut</code-name-base>
             <module-dependencies>
                 <dependency>
+                    <code-name-base>org.netbeans.modules.fullstack</code-name-base>
+                    <build-prerequisite/><compile-dependency/>
+                    <run-dependency><specification-version>1.0</specification-version></run-dependency>
+                </dependency>
+                <dependency>
                     <code-name-base>com.google.gson</code-name-base>
                     <build-prerequisite/>
                     <compile-dependency/>
@@ -344,6 +349,15 @@
                     <run-dependency>
                         <release-version>1</release-version>
                         <specification-version>1.79</specification-version>
+                    </run-dependency>
+                </dependency>
+                <dependency>
+                    <code-name-base>org.netbeans.modules.projectuiapi.base</code-name-base>
+                    <build-prerequisite/>
+                    <compile-dependency/>
+                    <run-dependency>
+                        <release-version>1</release-version>
+                        <specification-version>1.0</specification-version>
                     </run-dependency>
                 </dependency>
                 <dependency>

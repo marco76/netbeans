@@ -89,16 +89,17 @@ final class HtmlStructureItem implements StructureItem {
 
     @Override
     public String getHtml(HtmlFormatter formatter) {
-        formatter.appendHtml(getName());
-        if (idAttributeValue != null) {
-            formatter.appendHtml("&nbsp;<font color=808080>id=");
-            formatter.appendText(idAttributeValue);
-            formatter.appendHtml("</font>"); //NOI18N
-        }
-        if (classAttributeValue != null) {
-            formatter.appendHtml("&nbsp;<font color=808080>class=");
-            formatter.appendText(classAttributeValue);
-            formatter.appendHtml("</font>"); //NOI18N
+        formatter.appendText(getName());
+        if (idAttributeValue != null && !idAttributeValue.isBlank()) {
+            formatter.appendText("#" + idAttributeValue);
+        } else if (classAttributeValue != null && !classAttributeValue.isBlank()) {
+            String[] classes = classAttributeValue.trim().split("\\s+");
+            // Keep deeply nested trails readable; the Navigator retains the
+            // same compact selector notation.
+            formatter.appendText("." + classes[0]);
+            if (classes.length > 1) {
+                formatter.appendText("…");
+            }
         }
         return formatter.getText();
     }

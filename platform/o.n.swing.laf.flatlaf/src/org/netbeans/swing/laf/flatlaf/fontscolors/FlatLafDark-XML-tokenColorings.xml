@@ -24,17 +24,17 @@
     <fontcolor name="xml-attribute" default="markup-attribute"/>
     <fontcolor name="xml-cdata-section" default="default"/>
     <fontcolor name="xml-comment" default="comment"/>
-    <fontcolor name="xml-doctype" default="default" foreColor="ffe8bf6a"/>
+    <fontcolor name="xml-doctype" default="default" foreColor="ffc5a5e8"/>
     <fontcolor name="xml-EOL" default="whitespace"/>
     <fontcolor name="xml-error" default="error"/>
-    <fontcolor name="xml-operator" default="operator" foreColor="ff6a8759"/>
-    <fontcolor name="xml-pi-content" default="default" foreColor="ff00007c"/>
-    <fontcolor name="xml-pi-end" default="default" foreColor="ffe8bf6a"/>
-    <fontcolor name="xml-pi-start" default="default" foreColor="ffe8bf6a"/>
+    <fontcolor name="xml-operator" default="operator" foreColor="ff9ecb8f"/>
+    <fontcolor name="xml-pi-content" default="default" foreColor="ff9da5b4"/>
+    <fontcolor name="xml-pi-end" default="default" foreColor="ffc5a5e8"/>
+    <fontcolor name="xml-pi-start" default="default" foreColor="ffc5a5e8"/>
     <fontcolor name="xml-pi-target" default="default"/>
     <fontcolor name="xml-ref" default="entity-reference"/>
     <fontcolor name="xml-tag" default="markup-element"/>
     <fontcolor name="xml-text" default="default"/>
-    <fontcolor name="xml-value" default="default" foreColor="ff6a8759"/>
+    <fontcolor name="xml-value" default="default" foreColor="ff9ecb8f"/>
     <fontcolor name="xml-ws" default="whitespace"/>
 </fontscolors>

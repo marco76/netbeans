@@ -24,8 +24,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.EventQueue;
+import java.awt.Font;
+import java.awt.AlphaComposite;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Rectangle;
+import java.awt.font.TextAttribute;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -57,8 +62,10 @@ import javax.swing.Action;
 import javax.swing.ActionMap;
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
+import javax.swing.Icon;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JTree;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -74,6 +81,7 @@ import org.netbeans.api.annotations.common.StaticResource;
 import org.netbeans.api.project.FileOwnerQuery;
 import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectUtils;
+import org.netbeans.api.project.SourceGroup;
 import org.netbeans.api.project.ui.OpenProjects;
 import org.netbeans.modules.project.ui.groups.Group;
 import org.openide.DialogDisplayer;
@@ -89,6 +97,7 @@ import org.openide.awt.UndoRedo;
 import org.openide.explorer.ExplorerManager;
 import org.openide.explorer.ExplorerUtils;
 import org.openide.explorer.view.BeanTreeView;
+import org.openide.explorer.view.NodeRenderer;
 import org.openide.explorer.view.Visualizer;
 import org.openide.filesystems.FileObject;
 import org.openide.loaders.DataObject;
@@ -715,10 +724,122 @@ public class ProjectTab extends TopComponent
     }
 
     // Private innerclasses ----------------------------------------------------
+
+    private static Font projectFont(Font font) {
+        return font.deriveFont(Map.of(TextAttribute.WEIGHT, TextAttribute.WEIGHT_SEMIBOLD));
+    }
+
+    /** Keep node-provided HTML, error colors, icons and drag feedback intact. */
+    private static final class ProjectTreeRenderer extends NodeRenderer {
+        @Override
+        public Component getTreeCellRendererComponent(JTree tree, Object value,
+                boolean selected, boolean expanded, boolean leaf, int row, boolean focused) {
+            Component component = super.getTreeCellRendererComponent(
+                    tree, value, selected, expanded, leaf, row, focused);
+            // NodeRenderer reuses its label and does not reset its foreground.
+            // Do not let a muted folder or source group color leak into other rows.
+            Color foreground = selected ? UIManager.getColor("Tree.selectionForeground") : tree.getForeground();
+            component.setForeground(foreground != null ? foreground : tree.getForeground());
+            if (value == null || tree.getFont() == null) {
+                return component;
+            }
+            Node node = Visualizer.findNode(value);
+            Node parent = node.getParentNode();
+            boolean project = parent != null && parent.getParentNode() == null;
+            Font font = tree.getFont().deriveFont(Font.PLAIN);
+            component.setFont(project ? projectFont(font) : font);
+            if (!selected && node.getHtmlDisplayName() == null
+                    && node.getLookup().lookup(SourceGroup.class) != null) {
+                Color secondary = UIManager.getColor("nb.projecttree.secondaryForeground"); // NOI18N
+                if (secondary != null) {
+                    component.setForeground(secondary);
+                }
+            }
+            FileObject file = node.getLookup().lookup(FileObject.class);
+            if (file == null) {
+                DataObject data = node.getLookup().lookup(DataObject.class);
+                file = data != null ? data.getPrimaryFile() : null;
+            }
+            if (!selected && !project && file != null && file.isFolder()
+                    && file.getNameExt().startsWith(".")) { // NOI18N
+                Color muted = UIManager.getColor("nb.projecttree.hiddenForeground"); // NOI18N
+                if (muted == null) {
+                    Color treeForeground = tree.getForeground();
+                    Color background = tree.getBackground();
+                    muted = new Color((treeForeground.getRed() + background.getRed()) / 2,
+                            (treeForeground.getGreen() + background.getGreen()) / 2,
+                            (treeForeground.getBlue() + background.getBlue()) / 2);
+                }
+                component.setForeground(muted);
+                if (component instanceof JLabel label && label.getIcon() != null) {
+                    label.setIcon(new MutedFolderIcon(label.getIcon()));
+                }
+            }
+            return component;
+        }
+    }
+
+    private static final class MutedFolderIcon implements Icon {
+        private final Icon delegate;
+
+        MutedFolderIcon(Icon delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public int getIconWidth() {
+            return delegate.getIconWidth();
+        }
+
+        @Override
+        public int getIconHeight() {
+            return delegate.getIconHeight();
+        }
+
+        @Override
+        public void paintIcon(Component component, Graphics graphics, int x, int y) {
+            Graphics2D faded = (Graphics2D) graphics.create();
+            try {
+                faded.setComposite(AlphaComposite.SrcOver.derive(0.5f));
+                delegate.paintIcon(component, faded, x, y);
+            } finally {
+                faded.dispose();
+            }
+        }
+    }
     
     /** Extending bean treeview. To be able to persist the selected paths
      */
     private class ProjectTreeView extends BeanTreeView {
+        ProjectTreeView() {
+            setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
+            tree.setCellRenderer(new ProjectTreeRenderer());
+            tree.addPropertyChangeListener(event -> {
+                String property = event.getPropertyName();
+                if ("font".equals(property) || "UI".equals(property) || "rowHeight".equals(property)) { // NOI18N
+                    updateRowHeight();
+                }
+            });
+            updateRowHeight();
+        }
+
+        private void updateRowHeight() {
+            Font font = tree.getFont();
+            if (font == null) {
+                return;
+            }
+            // Follow the user's font size, including accessibility and display scaling.
+            int padding = Math.max(4, Math.round(font.getSize2D() * 0.5f));
+            int height = tree.getFontMetrics(projectFont(font)).getHeight() + padding;
+            javax.swing.Icon icon = UIManager.getIcon("Tree.closedIcon"); // NOI18N
+            if (icon != null) {
+                height = Math.max(height, icon.getIconHeight() + padding);
+            }
+            if (tree.getRowHeight() != height) {
+                tree.setRowHeight(height);
+            }
+        }
+
         public void scrollToNode(final Node n) {
             // has to be delayed to be sure that events for Visualizers
             // were processed and TreeNodes are already in hierarchy

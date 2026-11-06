@@ -1,0 +1,13 @@
+<#assign baseName = name?replace("[.]directive$", "", "r")>
+<#assign className = "">
+<#list baseName?split("[-_. ]", "r") as part>
+    <#assign className = className + part?cap_first>
+</#list>
+import { Directive } from '@angular/core';
+
+@Directive({
+  selector: '[app${className}]',
+  standalone: true
+})
+export class ${className}Directive {
+}

@@ -132,9 +132,13 @@ public class MavenSourcesImpl implements Sources, SourceGroupModifierImplementat
             NbMavenProjectImpl project = project();
             MavenProject mp = project.getOriginalMavenProject();
             NbMavenProject watcher = project.getProjectWatcher();
-            File folder = FileUtilities.convertStringToFile(mp.getBuild().getSourceDirectory());
+            // Keep existing conventional sources visible while the POM cannot be loaded.
+            boolean fallback = NbMavenProject.isErrorPlaceholder(mp);
+            File folder = fallback ? new File(FileUtil.toFile(project.getProjectDirectory()), "src/main/java")
+                    : FileUtilities.convertStringToFile(mp.getBuild().getSourceDirectory());
             changed = changed | checkSourceGroupCache(folder, NAME_SOURCE, SG_Sources(), javaGroup, watcher);
-            folder = FileUtilities.convertStringToFile(mp.getBuild().getTestSourceDirectory());
+            folder = fallback ? new File(FileUtil.toFile(project.getProjectDirectory()), "src/test/java")
+                    : FileUtilities.convertStringToFile(mp.getBuild().getTestSourceDirectory());
             changed = changed | checkSourceGroupCache(folder, NAME_TESTSOURCE, SG_Test_Sources(), javaGroup, watcher);
             changed = changed | checkGeneratedGroupsCache();
             if (checkAlsoNonJavaStuff) {

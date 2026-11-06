@@ -207,7 +207,7 @@ class DiffSplitPaneDivider extends BasicSplitPaneDivider implements MouseMotionL
 
             GraphicsUtils.configureDefaultRenderingHints(g);
             int currDiff = master.getCurrentDifference();
-            String diffInfo = (currDiff + 1) + "/" + master.getDifferenceCount(); // NOI18N
+            String diffInfo = (currDiff + 1) + " / " + master.getDifferenceCount(); // NOI18N
             int width = g.getFontMetrics().stringWidth(diffInfo);
             g.setColor(fontColor);
             Rectangle hotSpot = new Rectangle((getWidth() - width) / 2, 0, width, g.getFontMetrics().getHeight());
@@ -224,8 +224,8 @@ class DiffSplitPaneDivider extends BasicSplitPaneDivider implements MouseMotionL
             int rightY = getWidth() - 1;
 
             g.setColor(UIManager.getColor("controlShadow"));
-            g.drawLine(0, clip.y, 0, clip.height);
-            g.drawLine(rightY, clip.y, rightY, clip.height);
+            g.drawLine(0, clip.y, 0, clip.y + clip.height);
+            g.drawLine(rightY, clip.y, rightY, clip.y + clip.height);
 
             int curDif = master.getCurrentDifference();
             
@@ -287,7 +287,8 @@ class DiffSplitPaneDivider extends BasicSplitPaneDivider implements MouseMotionL
             path.closePath();
             g.setColor(fillClr);
             g.fill(path);
-            g.setColor(master.getColorLines());
+            g.setColor(g.getStroke().equals(master.getBoldStroke())
+                    ? master.getSelectedChangeColor() : master.getColorLines());
             g.draw(upper);
             g.draw(bottom);
         }

@@ -35,6 +35,13 @@ public final class SpringAnnotations {
             "org.springframework.stereotype.Component", //NOI18N
             "org.springframework.stereotype.Controller", //NOI18N
             "org.springframework.stereotype.Repository", //NOI18N
-            "org.springframework.stereotype.Service" //NOI18N
+            "org.springframework.stereotype.Service", //NOI18N
+            "org.springframework.context.annotation.Configuration", //NOI18N
+            "org.springframework.web.bind.annotation.RestController", //NOI18N
+            "org.springframework.web.bind.annotation.ControllerAdvice", //NOI18N
+            "org.springframework.web.bind.annotation.RestControllerAdvice", //NOI18N
+            "org.springframework.data.repository.RepositoryDefinition", //NOI18N
+            "javax.inject.Named", //NOI18N
+            "jakarta.inject.Named" //NOI18N
             )));
 }

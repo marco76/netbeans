@@ -69,6 +69,7 @@ public final class ReplaceBar extends JPanel implements PropertyChangeListener {
         setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
         setFocusCycleRoot(true);
         setForeground(UIManager.getColor("textText")); //NOI18N
+        setBorder(BorderFactory.createEmptyBorder(2, 0, 4, 4));
 
         // padding at the end of the toolbar
         add(Box.createHorizontalStrut(8)); //spacer in the beginnning of the toolbar
@@ -90,12 +91,11 @@ public final class ReplaceBar extends JPanel implements PropertyChangeListener {
         replaceLabel = new JLabel();
         Mnemonics.setLocalizedText(replaceLabel, NbBundle.getMessage(ReplaceBar.class, "CTL_Replace")); // NOI18N
         replaceLabel.setLabelFor(replaceTextField);
+        replaceLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 6));
         add(replaceLabel);
         add(replaceComboBox);
 
-        final JToolBar.Separator leftSeparator = new JToolBar.Separator();
-        leftSeparator.setOrientation(SwingConstants.VERTICAL);
-        add(leftSeparator);
+        add(Box.createHorizontalStrut(6));
 
         replaceButton = SearchButton.createButton("org/netbeans/modules/editor/search/resources/replace.png", "CTL_ReplaceNext"); // NOI18N
         replaceButton.setToolTipText(NbBundle.getMessage(ReplaceBar.class, "TOOLTIP_ReplaceText")); // NOI18N

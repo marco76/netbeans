@@ -65,6 +65,7 @@ public final class TermOptionsPanel extends JPanel {
 	
 	initComponents();
 	initCustomComponents();
+        styleForm();
 
 	term = new Term();
 	final String line1String = MSG_Hello() + "\r\n";	// NOI18N
@@ -75,6 +76,105 @@ public final class TermOptionsPanel extends JPanel {
 	term.setClickToType(true);
 
 	previewPanel.add(term, BorderLayout.CENTER);
+    }
+
+    /** Keep presentation separate from GUI-builder generated controls and bindings. */
+    private void styleForm() {
+        Color[] palette = {new Color(0x242C38), new Color(0xFAFBFD),
+            new Color(0xD2E4F8), new Color(0x111827), new Color(0xE5E7EB),
+            new Color(0x64748B), new Color(0x2563EB), new Color(0x0891B2),
+            new Color(0x15803D), new Color(0xB45309), new Color(0xDC2626),
+            new Color(0x7C3AED), Color.BLACK, Color.WHITE};
+        String[] names = new String[palette.length];
+        for (int i = 0; i < palette.length; i++) {
+            names[i] = String.format(java.util.Locale.ROOT, "#%06X", palette[i].getRGB() & 0xFFFFFF); // NOI18N
+        }
+        for (org.openide.awt.ColorComboBox combo : new org.openide.awt.ColorComboBox[]{
+                foregroundComboBox, backgroundComboBox, selectionComboBox}) {
+            combo.setModel(palette, names);
+            combo.setMaximumRowCount(10);
+            combo.setPreferredSize(new java.awt.Dimension(240, 32));
+            combo.putClientProperty("JComponent.roundRect", true); // NOI18N
+        }
+        removeAll();
+        setLayout(new java.awt.GridBagLayout());
+        setBorder(javax.swing.BorderFactory.createEmptyBorder(12, 16, 12, 16));
+        int row = 0;
+        addFormRow(descriptionLabel, restoreButton, row++);
+        addSection(Bundle.Terminal_appearance(), row++);
+        JPanel fontControls = new JPanel(new BorderLayout(8, 0));
+        fontControls.setOpaque(false);
+        fontControls.add(fontText, BorderLayout.CENTER);
+        fontControls.add(fontButton, BorderLayout.EAST);
+        addFormRow(fontLabel, fontControls, row++);
+        addFormRow(fontSizeLabel, fontSizeSpinner, row++);
+        addFormRow(foregroundLabel, foregroundComboBox, row++);
+        addFormRow(backgroundLabel, backgroundComboBox, row++);
+        addFormRow(selectionLabel, selectionComboBox, row++);
+        addSection(Bundle.Terminal_behavior(), row++);
+        addFormRow(historySizeLabel, historySizeSpinner, row++);
+        addFormRow(tabSizeLabel, tabSizeSpinner, row++);
+        addFormRow(selectByWordLabel, selectByWordTextField, row++);
+        JPanel behavior = new JPanel(new java.awt.GridLayout(0, 2, 16, 6));
+        behavior.setOpaque(false);
+        for (javax.swing.JCheckBox box : new javax.swing.JCheckBox[]{scrollOnInputCheckBox,
+                scrollOnOutputCheckBox, clickToTypeCheckBox, lineWrapCheckBox,
+                ignoreKeymapCheckBox, altSendsEscapeCheckBox}) {
+            behavior.add(box);
+        }
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = row++;
+        c.gridwidth = 2;
+        c.fill = java.awt.GridBagConstraints.HORIZONTAL;
+        c.insets = new java.awt.Insets(8, 0, 4, 0);
+        add(behavior, c);
+        addSection(Bundle.Terminal_preview(), row++);
+        Color border = UIManager.getColor("Component.borderColor"); // NOI18N
+        if (border == null) {
+            border = UIManager.getColor("Separator.foreground"); // NOI18N
+        }
+        previewPanel.setBorder(javax.swing.BorderFactory.createLineBorder(
+                border != null ? border : Color.GRAY));
+        c.gridy = row;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.fill = java.awt.GridBagConstraints.BOTH;
+        previewPanel.setPreferredSize(new java.awt.Dimension(460, 120));
+        add(previewPanel, c);
+    }
+
+    @Messages({"Terminal.appearance=Appearance", "Terminal.behavior=Scrolling and input",
+        "Terminal.preview=Live preview"})
+    private void addSection(String title, int row) {
+        javax.swing.JLabel label = new javax.swing.JLabel(title);
+        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = row;
+        c.gridwidth = 2;
+        c.anchor = java.awt.GridBagConstraints.WEST;
+        c.insets = new java.awt.Insets(14, 0, 8, 0);
+        add(label, c);
+    }
+
+    private void addFormRow(javax.swing.JLabel label, javax.swing.JComponent control, int row) {
+        label.setLabelFor(control == null ? null : control);
+        java.awt.GridBagConstraints c = new java.awt.GridBagConstraints();
+        c.gridy = row;
+        c.gridx = 0;
+        c.anchor = java.awt.GridBagConstraints.WEST;
+        c.insets = new java.awt.Insets(4, 0, 4, 18);
+        add(label, c);
+        c.gridx = 1;
+        c.weightx = 1;
+        c.insets = new java.awt.Insets(4, 0, 4, 0);
+        c.fill = control instanceof javax.swing.JSpinner || control == restoreButton
+                ? java.awt.GridBagConstraints.NONE : java.awt.GridBagConstraints.HORIZONTAL;
+        if (control instanceof javax.swing.JSpinner) {
+            control.setPreferredSize(new java.awt.Dimension(120, 30));
+        }
+        add(control, c);
     }
 
     private boolean changingSelectByWordText = false;

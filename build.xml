@@ -22,4 +22,20 @@
 <project name="main" basedir="nbbuild" default="build-nozip">
     <description>NetBeans master build script.</description>
     <import file="nbbuild/build.xml"/>
+    <target name="enable-fullstack" description="Enable Full Stack Connections in the development IDE profile (restart required).">
+        <property name="fullstack.userdir" location="testuserdir"/>
+        <mkdir dir="${fullstack.userdir}/config/Modules"/>
+        <!-- User configuration overrides the feature-on-demand disabled entry. -->
+        <copy file="netbeans/enterprise/config/Modules/org-netbeans-modules-micronaut.xml"
+              tofile="${fullstack.userdir}/config/Modules/org-netbeans-modules-micronaut.xml"
+              overwrite="true"/>
+        <copy file="netbeans/enterprise/config/Modules/org-netbeans-modules-fullstack.xml"
+              tofile="${fullstack.userdir}/config/Modules/org-netbeans-modules-fullstack.xml"
+              overwrite="true"/>
+        <echo>Full Stack Connections enabled in ${fullstack.userdir}. Restart the IDE.</echo>
+    </target>
+    <target name="build-angular" depends="build-nozip"
+            description="Build the IDE, including Angular workspace support (no ZIP)."/>
+    <target name="run-angular" depends="build-angular,tryme"
+            description="Build and launch the IDE with Angular workspace support."/>
 </project>

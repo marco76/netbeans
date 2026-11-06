@@ -29,4 +29,78 @@
             <activatedProfile>native</activatedProfile>
         </activatedProfiles>
     </action>
+    <action>
+        <actionName>run</actionName>
+        <packagings>
+            <packaging>jar</packaging>
+            <packaging>war</packaging>
+        </packagings>
+        <goals>
+            <goal>process-classes</goal>
+            <goal>org.springframework.boot:spring-boot-maven-plugin:run</goal>
+        </goals>
+        <reactor>am</reactor>
+        <properties>
+            <exec.args>-classpath %classpath</exec.args>
+            <spring-boot.run.arguments>${exec.appArgs}</spring-boot.run.arguments>
+            <spring-boot.run.jvmArguments>${exec.vmArgs}</spring-boot.run.jvmArguments>
+            <spring-boot.run.main-class>${packageClassName}</spring-boot.run.main-class>
+        </properties>
+    </action>
+    <action>
+        <actionName>run.single.main</actionName>
+        <packagings>
+            <packaging>*</packaging>
+        </packagings>
+        <goals>
+            <goal>process-classes</goal>
+            <goal>org.springframework.boot:spring-boot-maven-plugin:run</goal>
+        </goals>
+        <reactor>am</reactor>
+        <properties>
+            <exec.args>-classpath %classpath</exec.args>
+            <spring-boot.run.arguments>${exec.appArgs}</spring-boot.run.arguments>
+            <spring-boot.run.jvmArguments>${exec.vmArgs}</spring-boot.run.jvmArguments>
+            <spring-boot.run.main-class>${packageClassName}</spring-boot.run.main-class>
+        </properties>
+    </action>
+    <action>
+        <actionName>debug</actionName>
+        <packagings>
+            <packaging>jar</packaging>
+            <packaging>war</packaging>
+        </packagings>
+        <goals>
+            <goal>process-classes</goal>
+            <goal>org.springframework.boot:spring-boot-maven-plugin:run</goal>
+        </goals>
+        <reactor>am</reactor>
+        <properties>
+            <exec.args>-classpath %classpath</exec.args>
+            <exec.vmArgs>-agentlib:jdwp=transport=dt_socket,server=n,address=${jpda.address}</exec.vmArgs>
+            <spring-boot.run.arguments>${exec.appArgs}</spring-boot.run.arguments>
+            <spring-boot.run.jvmArguments>${exec.vmArgs}</spring-boot.run.jvmArguments>
+            <spring-boot.run.main-class>${packageClassName}</spring-boot.run.main-class>
+            <jpda.listen>true</jpda.listen>
+        </properties>
+    </action>
+    <action>
+        <actionName>debug.single.main</actionName>
+        <packagings>
+            <packaging>*</packaging>
+        </packagings>
+        <goals>
+            <goal>process-test-classes</goal>
+            <goal>org.springframework.boot:spring-boot-maven-plugin:run</goal>
+        </goals>
+        <reactor>am</reactor>
+        <properties>
+            <exec.args>-classpath %classpath</exec.args>
+            <exec.vmArgs>-agentlib:jdwp=transport=dt_socket,server=n,address=${jpda.address}</exec.vmArgs>
+            <spring-boot.run.arguments>${exec.appArgs}</spring-boot.run.arguments>
+            <spring-boot.run.jvmArguments>${exec.vmArgs}</spring-boot.run.jvmArguments>
+            <spring-boot.run.main-class>${packageClassName}</spring-boot.run.main-class>
+            <jpda.listen>true</jpda.listen>
+        </properties>
+    </action>
 </actions>

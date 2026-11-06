@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+
+-->
+<rxjs-reference schema-version="1">
+  <operator name="combineLatestWith">
+    <category>Combination</category>
+    <summary>Combine each source value with the latest values from other streams.</summary>
+    <behavior>Waits for every input to emit, then emits the latest tuple whenever any input changes.</behavior>
+    <types>T → [T, A, …]</types>
+    <example>query$.pipe(combineLatestWith(filters$))</example>
+    <caution>Every input must emit before the first combined result.</caution>
+    <url>https://rxjs.dev/api/operators/combineLatestWith</url>
+  </operator>
+  <operator name="concatWith">
+    <category>Combination</category>
+    <summary>Continue with other streams after this one completes.</summary>
+    <behavior>Subscribes to each subsequent input in order after the previous input completes.</behavior>
+    <types>T → T or R (sequential streams)</types>
+    <example>cached$.pipe(concatWith(request$))</example>
+    <caution>A source that never completes prevents subsequent subscriptions.</caution>
+    <url>https://rxjs.dev/api/operators/concatWith</url>
+  </operator>
+  <operator name="endWith">
+    <category>Combination</category>
+    <summary>Emit final values after successful completion.</summary>
+    <behavior>Appends supplied values when the source completes normally.</behavior>
+    <types>T → T or R</types>
+    <example>loading$.pipe(endWith(false))</example>
+    <caution>Final values are not emitted on error or unsubscription.</caution>
+    <url>https://rxjs.dev/api/operators/endWith</url>
+  </operator>
+  <operator name="debounce">
+    <category>Filtering</category>
+    <summary>Wait for a quiet period controlled by another stream.</summary>
+    <behavior>Uses a duration selector for each value; a newer value replaces the pending duration.</behavior>
+    <types>T → T (after duration)</types>
+    <example>query$.pipe(debounce(() =&gt; timer(300)))</example>
+    <caution>Return an ObservableInput from the duration selector; use debounceTime for a fixed delay.</caution>
+    <url>https://rxjs.dev/api/operators/debounce</url>
+  </operator>
+  <operator name="delay">
+    <category>Utility</category>
+    <summary>Delay source values by a time interval.</summary>
+    <behavior>Shifts values in time using a delay in milliseconds or a Date.</behavior>
+    <types>T → T (delayed)</types>
+    <example>source$.pipe(delay(300))</example>
+    <caution>Errors are forwarded immediately; delay is not a request cancellation mechanism.</caution>
+    <url>https://rxjs.dev/api/operators/delay</url>
+  </operator>
+  <operator name="distinct">
+    <category>Filtering</category>
+    <summary>Emit only previously unseen values.</summary>
+    <behavior>Tracks previously emitted keys for the lifetime of the subscription unless flushed.</behavior>
+    <types>T → T (unique keys)</types>
+    <example>users$.pipe(distinct(user =&gt; user.id))</example>
+    <caution>The remembered key set can grow indefinitely; distinctUntilChanged only compares consecutive values.</caution>
+    <url>https://rxjs.dev/api/operators/distinct</url>
+  </operator>
+  <operator name="scan">
+    <category>Transformation</category>
+    <summary>Accumulate state on every emission.</summary>
+    <behavior>Applies an accumulator and emits each updated state.</behavior>
+    <types>T → accumulated R</types>
+    <example>changes$.pipe(scan((total, value) =&gt; total + value, 0))</example>
+    <caution>Use immutable updates for Angular state. The seed itself is not emitted automatically.</caution>
+    <url>https://rxjs.dev/api/operators/scan</url>
+  </operator>
+  <operator name="reduce">
+    <category>Transformation</category>
+    <summary>Emit accumulated state when the source completes.</summary>
+    <behavior>Applies an accumulator but emits only the final result.</behavior>
+    <types>T → final R</types>
+    <example>values$.pipe(reduce((total, value) =&gt; total + value, 0))</example>
+    <caution>A noncompleting source never emits a final result.</caution>
+    <url>https://rxjs.dev/api/operators/reduce</url>
+  </operator>
+  <operator name="timeout">
+    <category>Utility</category>
+    <summary>Fail when expected emissions take too long.</summary>
+    <behavior>A timeout configuration can limit the first emission or the gap between emissions.</behavior>
+    <types>T → T or timeout error</types>
+    <example>request$.pipe(timeout({ first: 5000 }))</example>
+    <caution>A timeout does not undo server-side work; handle the error or provide a fallback.</caution>
+    <url>https://rxjs.dev/api/operators/timeout</url>
+  </operator>
+  <operator name="map">
+    <category>Transformation</category>
+    <summary>Transform each emitted value.</summary>
+    <behavior>Runs the projection for each value; does not subscribe to returned observables.</behavior>
+    <types>T → R</types>
+    <example>source$.pipe(map(user =&gt; user.name))</example>
+    <caution>Use a flattening operator when the projection returns an observable.</caution>
+    <url>https://rxjs.dev/api/operators/map</url>
+    <parameters>project(value, index): calculate the output for each emission. Returning an observable does not subscribe to it.</parameters>
+    <marble>
+      <source>-a-b-c-|</source>
+      <result>-A-B-C-|</result>
+      <expression>map(value =&gt; value.toUpperCase())</expression>
+    </marble>
+  </operator>
+  <operator name="filter">
+    <category>Filtering</category>
+    <summary>Keep values matching a predicate.</summary>
+    <behavior>Drops nonmatching values; completion and errors still pass through.</behavior>
+    <types>T → T (matching values)</types>
+    <example>source$.pipe(filter(value =&gt; value.length &gt;= 2))</example>
+    <caution>A filtered stream may never emit.</caution>
+    <url>https://rxjs.dev/api/operators/filter</url>
+    <parameters>predicate(value, index): return true to keep a value. A type-guard predicate can narrow the output type.</parameters>
+    <marble>
+      <source>-a-b-c-|</source>
+      <result>-a---c-|</result>
+      <expression>filter(value =&gt; value !== 'b')</expression>
+    </marble>
+  </operator>
+  <operator name="tap">
+    <category>Utility</category>
+    <summary>Observe notifications for side effects.</summary>
+    <behavior>Passes values through unchanged; useful for temporary logging.</behavior>
+    <types>T → T</types>
+    <example>source$.pipe(tap(value =&gt; console.debug(value)))</example>
+    <caution>Thrown errors terminate the stream; avoid production logging of sensitive values.</caution>
+    <url>https://rxjs.dev/api/operators/tap</url>
+    <parameters>observer or next callback: observe values, errors or completion without transforming emitted values.</parameters>
+    <marble>
+      <source>-a-b-c-|</source>
+      <result>-a-b-c-|</result>
+      <expression>tap(value =&gt; console.debug(value))</expression>
+    </marble>
+  </operator>
+  <operator name="debounceTime">
+    <category>Filtering</category>
+    <summary>Wait for a quiet period.</summary>
+    <behavior>Emits the latest value after the specified interval without a new value.</behavior>
+    <types>T → T (after quiet period)</types>
+    <example>query$.pipe(debounceTime(300))</example>
+    <caution>Delay is in milliseconds; this does not cancel an already running HTTP request.</caution>
+    <url>https://rxjs.dev/api/operators/debounceTime</url>
+    <parameters>dueTime: quiet period in milliseconds. scheduler: optional scheduler; defaults to asyncScheduler.</parameters>
+  </operator>
+  <operator name="distinctUntilChanged">
+    <category>Filtering</category>
+    <summary>Skip consecutive equal values.</summary>
+    <behavior>Uses === by default; an optional comparator controls equality.</behavior>
+    <types>T → T (consecutive changes)</types>
+    <example>query$.pipe(distinctUntilChanged())</example>
+    <caution>Objects are compared by reference unless you provide a comparator.</caution>
+    <url>https://rxjs.dev/api/operators/distinctUntilChanged</url>
+    <parameters>comparator(previous, current): return true to suppress a value; defaults to ===. keySelector: optional comparison key.</parameters>
+    <marble>
+      <source>-a-a-b-|</source>
+      <result>-a---b-|</result>
+      <expression>distinctUntilChanged()</expression>
+    </marble>
+  </operator>
+  <operator name="switchMap">
+    <category>Flattening</category>
+    <summary>Keep only the latest inner subscription.</summary>
+    <behavior>A new source value unsubscribes from the previous inner observable and subscribes to the next.</behavior>
+    <types>T → Observable&lt;R&gt; → R (latest)</types>
+    <example>query$.pipe(switchMap(q =&gt; http.get('/api/search', { params: { q } })))</example>
+    <caution>Unsubscription cannot undo a server-side write. Consider concatMap or exhaustMap for saves.</caution>
+    <url>https://rxjs.dev/api/operators/switchMap</url>
+    <parameters>project(value, index): return an ObservableInput for each accepted source value, for example an HTTP request.</parameters>
+    <comparison>mapping</comparison>
+  </operator>
+  <operator name="concatMap">
+    <category>Flattening</category>
+    <summary>Queue inner observables sequentially.</summary>
+    <behavior>Waits for each inner observable to complete before subscribing to the next.</behavior>
+    <types>T → Observable&lt;R&gt; → R (sequential)</types>
+    <example>save$.pipe(concatMap(value =&gt; http.post('/api/items', value)))</example>
+    <caution>A noncompleting inner stream blocks the queue; a fast source can grow the queue.</caution>
+    <url>https://rxjs.dev/api/operators/concatMap</url>
+    <parameters>project(value, index): return an ObservableInput for each accepted source value, for example an HTTP request.</parameters>
+    <comparison>mapping</comparison>
+  </operator>
+  <operator name="mergeMap">
+    <category>Flattening</category>
+    <summary>Run inner observables concurrently.</summary>
+    <behavior>Emits results as they arrive; optional concurrency limits active subscriptions.</behavior>
+    <types>T → Observable&lt;R&gt; → R (concurrent)</types>
+    <example>ids$.pipe(mergeMap(id =&gt; http.get('/api/items/' + id), 4))</example>
+    <caution>Results can arrive out of order; long-lived inner subscriptions need cleanup.</caution>
+    <url>https://rxjs.dev/api/operators/mergeMap</url>
+    <parameters>project(value, index): return an ObservableInput. concurrent: maximum active inner subscriptions; defaults to Infinity.</parameters>
+    <comparison>mapping</comparison>
+  </operator>
+  <operator name="exhaustMap">
+    <category>Flattening</category>
+    <summary>Ignore new work while an inner subscription is active.</summary>
+    <behavior>Accepts another source value only after the current inner observable completes.</behavior>
+    <types>T → Observable&lt;R&gt; → R (busy values ignored)</types>
+    <example>submit$.pipe(exhaustMap(value =&gt; http.post('/api/submit', value)))</example>
+    <caution>Ignored source values are discarded, not queued.</caution>
+    <url>https://rxjs.dev/api/operators/exhaustMap</url>
+    <parameters>project(value, index): return an ObservableInput for each accepted source value, for example an HTTP request.</parameters>
+    <comparison>mapping</comparison>
+  </operator>
+  <operator name="catchError">
+    <category>Error handling</category>
+    <summary>Replace a failed stream with another observable.</summary>
+    <behavior>The replacement observable takes over; placement controls which subscription survives.</behavior>
+    <types>T → T or recovery R</types>
+    <example>query$.pipe(switchMap(q =&gt; search(q).pipe(catchError(() =&gt; of([])))))</example>
+    <caution>Outside switchMap, recovery can complete the entire query stream after the first failure.</caution>
+    <url>https://rxjs.dev/api/operators/catchError</url>
+    <parameters>selector(error, caught): return a replacement ObservableInput or throw an error. Placement determines which stream recovers.</parameters>
+  </operator>
+  <operator name="retry">
+    <category>Error handling</category>
+    <summary>Resubscribe after an error.</summary>
+    <behavior>Repeats the source subscription according to its retry configuration.</behavior>
+    <types>T → T (resubscriptions)</types>
+    <example>request$.pipe(retry({ count: 2, delay: 1000 }))</example>
+    <caution>Retries can repeat writes; retrying without a bound can continue indefinitely.</caution>
+    <url>https://rxjs.dev/api/operators/retry</url>
+  </operator>
+  <operator name="finalize">
+    <category>Utility</category>
+    <summary>Run cleanup when a subscription ends.</summary>
+    <behavior>Runs on completion, error, or explicit unsubscription.</behavior>
+    <types>T → T</types>
+    <example>request$.pipe(finalize(() =&gt; loading.set(false)))</example>
+    <caution>Cleanup also runs when switchMap cancels an inner subscription.</caution>
+    <url>https://rxjs.dev/api/operators/finalize</url>
+  </operator>
+  <operator name="first">
+    <category>Filtering</category>
+    <summary>Emit the first matching value, then complete.</summary>
+    <behavior>Without a predicate, emits the first source value. With a predicate, waits for the first match and then unsubscribes.</behavior>
+    <types>T → T (first match)</types>
+    <example>request$.pipe(first())
+source$.pipe(first(value =&gt; value.active))</example>
+    <caution>An empty source or no matching value raises EmptyError unless a default is supplied. Use take(1) when empty completion is acceptable.</caution>
+    <url>https://rxjs.dev/api/operators/first</url>
+    <parameters>predicate: optional matching condition. defaultValue: optional fallback if no value matches; otherwise an empty source raises EmptyError.</parameters>
+    <marble>
+      <source>-a-b-c-|</source>
+      <result>-(a|)</result>
+      <expression>first()</expression>
+    </marble>
+  </operator>
+  <operator name="take">
+    <category>Filtering</category>
+    <summary>Complete after a fixed number of values.</summary>
+    <behavior>Unsubscribes from the source after the requested number of emissions.</behavior>
+    <types>T → T (first n)</types>
+    <example>source$.pipe(take(1))</example>
+    <caution>If the source never emits, take(1) alone does not end the subscription.</caution>
+    <url>https://rxjs.dev/api/operators/take</url>
+    <parameters>count: maximum number of source values to emit; zero completes immediately.</parameters>
+    <marble>
+      <source>-a-b-c-|</source>
+      <result>-a-(b|)</result>
+      <expression>take(2)</expression>
+    </marble>
+  </operator>
+  <operator name="takeUntil">
+    <category>Filtering</category>
+    <summary>Complete when a notifier emits.</summary>
+    <behavior>A notifier emission ends the source subscription.</behavior>
+    <types>T → T (until notification)</types>
+    <example>source$.pipe(takeUntil(destroy$))</example>
+    <caution>Completing the notifier without emitting does not stop the source.</caution>
+    <url>https://rxjs.dev/api/operators/takeUntil</url>
+    <parameters>notifier: its first emission completes the output. A notifier that only completes does not stop the source.</parameters>
+  </operator>
+  <operator name="shareReplay">
+    <category>Multicasting</category>
+    <summary>Share a source and replay recent values.</summary>
+    <behavior>Subscribers share an upstream subscription and receive buffered emissions.</behavior>
+    <types>T → T (shared and replayed)</types>
+    <example>request$.pipe(shareReplay({ bufferSize: 1, refCount: true }))</example>
+    <caution>Choose buffer size and refCount deliberately; cached values can become stale.</caution>
+    <url>https://rxjs.dev/api/operators/shareReplay</url>
+    <parameters>Prefer an explicit configuration: bufferSize controls replay history; refCount controls disconnection when no subscribers remain.</parameters>
+  </operator>
+  <operator name="startWith">
+    <category>Combination</category>
+    <summary>Emit initial values before the source.</summary>
+    <behavior>Emits the supplied values on subscription before subscribing to the source.</behavior>
+    <types>T → initial R, then T</types>
+    <example>results$.pipe(startWith([]))</example>
+    <caution>An initial UI value does not mean the request has completed.</caution>
+    <url>https://rxjs.dev/api/operators/startWith</url>
+  </operator>
+  <operator name="combineLatest">
+    <category>Creation</category>
+    <summary>Combine the latest values of multiple sources.</summary>
+    <behavior>Waits for every input to emit once, then emits whenever any input changes.</behavior>
+    <types>Observable&lt;A&gt;, Observable&lt;B&gt; → [A, B]</types>
+    <example>combineLatest([query$, filters$])</example>
+    <caution>One input without an initial emission can prevent any output.</caution>
+    <url>https://rxjs.dev/api/index/combineLatest</url>
+  </operator>
+  <operator name="forkJoin">
+    <category>Creation</category>
+    <summary>Collect the final values of completing sources.</summary>
+    <behavior>Emits once after all inputs complete, using their last values.</behavior>
+    <types>Observable&lt;A&gt;, Observable&lt;B&gt; → [A, B] (once)</types>
+    <example>forkJoin({ user: userRequest$, settings: settingsRequest$ })</example>
+    <caution>A noncompleting input prevents output; an empty input can complete without output.</caution>
+    <url>https://rxjs.dev/api/index/forkJoin</url>
+  </operator>
+  <operator name="of">
+    <category>Creation</category>
+    <summary>Emit supplied values and complete.</summary>
+    <behavior>Emits each argument synchronously, then completes.</behavior>
+    <types>T → Observable&lt;T&gt;</types>
+    <example>of([])</example>
+    <caution>of([1, 2]) emits one array, not two numbers.</caution>
+    <url>https://rxjs.dev/api/index/of</url>
+  </operator>
+  <operator name="takeUntilDestroyed">
+    <category>Angular</category>
+    <summary>Clean up with Angular's destruction lifecycle.</summary>
+    <behavior>Completes the observable when the associated DestroyRef is destroyed.</behavior>
+    <types>T → T (until destruction)</types>
+    <example>private readonly destroyRef = inject(DestroyRef);
+
+source$.pipe(
+  takeUntilDestroyed(this.destroyRef)
+).subscribe(value =&gt; { /* use value */ });</example>
+    <caution>Import DestroyRef and inject from @angular/core, and takeUntilDestroyed from @angular/core/rxjs-interop. Check your Angular version. Pass DestroyRef explicitly outside an injection context.</caution>
+    <url>https://angular.dev/api/core/rxjs-interop/takeUntilDestroyed</url>
+    <parameters>destroyRef: optional in an injection context; supply it explicitly outside one.</parameters>
+  </operator>
+  <operator name="toSignal">
+    <category>Angular</category>
+    <summary>Expose an observable as an Angular signal.</summary>
+    <behavior>Subscribes immediately and exposes the most recent value through a signal.</behavior>
+    <types>Observable&lt;T&gt; → Signal&lt;T | initial value&gt;</types>
+    <example>readonly users = toSignal(users$, { initialValue: [] });</example>
+    <caution>Import from @angular/core/rxjs-interop. Reuse the signal instead of repeatedly calling toSignal. Requires an injection context unless an injector is supplied.</caution>
+    <url>https://angular.dev/ecosystem/rxjs-interop</url>
+  </operator>
+  <operator name="AsyncPipe">
+    <category>Angular</category>
+    <summary>Consume observable values in a template.</summary>
+    <behavior>Subscribes for the view and unsubscribes when destroyed or when the expression changes.</behavior>
+    <types>Observable&lt;T&gt; → template value</types>
+    <example>@if (users$ | async; as users) {
+  &lt;!-- render users --&gt;
+}</example>
+    <caution>Import AsyncPipe from @angular/common in standalone components. Multiple async bindings can create multiple subscriptions.</caution>
+    <url>https://angular.dev/api/common/AsyncPipe</url>
+  </operator>
+</rxjs-reference>

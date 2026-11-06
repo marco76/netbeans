@@ -100,32 +100,32 @@ public class DiffModuleConfig {
     private DiffModuleConfig() {
         Color c = UIManager.getColor( "nb.diff.added.color" ); //NOI18N
         if( null == c )
-            c = new Color(180, 255, 180);
+            c = new Color(234, 247, 238);
         defaultAddedColor = c;
 
         c = UIManager.getColor( "nb.diff.changed.color" ); //NOI18N
         if( null == c )
-            c = new Color(160, 200, 255);
+            c = new Color(237, 243, 255);
         defaultChangedColor = c;
 
         c = UIManager.getColor( "nb.diff.deleted.color" ); //NOI18N
         if( null == c )
-            c = new Color(255, 160, 180);
+            c = new Color(252, 235, 236);
         defaultDeletedColor = c;
 
         c = UIManager.getColor( "nb.diff.applied.color" ); //NOI18N
         if( null == c )
-            c = new Color(180, 255, 180);
+            c = new Color(234, 247, 238);
         defaultAppliedColor = c;
 
         c = UIManager.getColor( "nb.diff.notapplied.color" ); //NOI18N
         if( null == c )
-            c = new Color(160, 200, 255);
+            c = new Color(237, 243, 255);
         defaultNotAppliedColor = c;
 
         c = UIManager.getColor( "nb.diff.unresolved.color" ); //NOI18N
         if( null == c )
-            c = new Color(255, 160, 180);
+            c = new Color(252, 235, 236);
         defaultUnresolvedColor = c;
 
         c = UIManager.getColor( "nb.diff.sidebar.deleted.color" ); //NOI18N

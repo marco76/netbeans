@@ -164,7 +164,8 @@ public class NamedQueryHyperlinkProvider implements HyperlinkProviderExt {
                         Iterator<? extends AnnotationMirror> iterator = annotationMirrors.iterator();
                         while (iterator.hasNext() && foundAm == null) {
                             AnnotationMirror next = iterator.next();
-                            if (next.getAnnotationType().toString().equals("javax.persistence.NamedQueries")) {//NOI18N
+                            String nextType = next.getAnnotationType().toString();
+                            if ("javax.persistence.NamedQueries".equals(nextType) || "jakarta.persistence.NamedQueries".equals(nextType)) {//NOI18N
                                 
                                 Map<? extends ExecutableElement, ? extends AnnotationValue> maps = next.getElementValues();
                                 
@@ -173,7 +174,8 @@ public class NamedQueryHyperlinkProvider implements HyperlinkProviderExt {
                                     for (Object val : lst) {
                                         if (val instanceof AnnotationMirror) {
                                             AnnotationMirror am = (AnnotationMirror) val;
-                                            if ("javax.persistence.NamedQuery".equals(am.getAnnotationType().toString())) {//NOI18N
+                                            String amType = am.getAnnotationType().toString();
+                                            if ("javax.persistence.NamedQuery".equals(amType) || "jakarta.persistence.NamedQuery".equals(amType)) {//NOI18N
                                                 Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = am.getElementValues();
                                                 for (ExecutableElement el : elementValues.keySet()) {
                                                     if (el.getSimpleName().contentEquals("name")) { //NOI18N
@@ -195,7 +197,7 @@ public class NamedQueryHyperlinkProvider implements HyperlinkProviderExt {
                                     }
                                 }
                                 
-                            } else if (next.getAnnotationType().toString().equals("javax.persistence.NamedQuery")) {//NOI18N
+                            } else if ("javax.persistence.NamedQuery".equals(nextType) || "jakarta.persistence.NamedQuery".equals(nextType)) {//NOI18N
                                 if (!next.getElementValues().isEmpty()) {
                                     Map<? extends ExecutableElement, ? extends AnnotationValue> elementValues = next.getElementValues();
                                     for (ExecutableElement el : elementValues.keySet()) {

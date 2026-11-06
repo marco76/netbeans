@@ -162,7 +162,10 @@ class DecoratedEditorPane extends JEditorPane implements PropertyChangeListener 
                         int height = (int) (rec2.getY() + rec2.getHeight() - rec1.getY());
                         if (ad != null) {
                             // TODO: can cause AIOOBE, synchronize "currentDiff" and "curDif" variables
-                            g.setStroke(curDif >= 0 && curDif < currentDiff.length && currentDiff[curDif] == ad ? master.getMaster().getBoldStroke() : cs);
+                            boolean selected = curDif >= 0 && curDif < currentDiff.length && currentDiff[curDif] == ad;
+                            g.setColor(selected ? master.getMaster().getSelectedChangeColor()
+                                    : master.getMaster().getColorLines());
+                            g.setStroke(selected ? master.getMaster().getBoldStroke() : cs);
                             int yy = y + height;
                             if (ad.getType() == (master.isFirst() ? Difference.ADD : Difference.DELETE)) {
                                 g.drawLine(0, yy, getWidth(), yy);

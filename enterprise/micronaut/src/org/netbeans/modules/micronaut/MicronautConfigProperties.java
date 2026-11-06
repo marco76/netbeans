@@ -53,6 +53,7 @@ import org.netbeans.api.java.source.TypeUtilities;
 import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectUtils;
 import org.netbeans.api.project.SourceGroup;
+import org.netbeans.modules.micronaut.spring.SpringConfigPropertiesHelper;
 import org.netbeans.modules.parsing.api.ParserManager;
 import org.netbeans.modules.parsing.api.ResultIterator;
 import org.netbeans.modules.parsing.api.Source;
@@ -79,7 +80,7 @@ public final class MicronautConfigProperties {
 
     public static boolean hasConfigMetadata(Project project) {
         ClassPath cp = getExecuteClasspath(project);
-        return cp != null && !cp.findAllResources(CONFIG_METADATA_JSON).isEmpty();
+        return cp != null && (!cp.findAllResources(CONFIG_METADATA_JSON).isEmpty() || SpringConfigPropertiesHelper.hasAdditionalConfigMetadata(cp));
     }
 
     public static Map<String, ConfigurationMetadataProperty> getProperties(Project project) {
@@ -104,6 +105,7 @@ public final class MicronautConfigProperties {
                     Exceptions.printStackTrace(ex);
                 }
             }
+            SpringConfigPropertiesHelper.loadAdditionalProperties(project, cp, props);
         }
         return props;
     }
@@ -130,6 +132,7 @@ public final class MicronautConfigProperties {
                     Exceptions.printStackTrace(ex);
                 }
             }
+            SpringConfigPropertiesHelper.loadAdditionalGroups(project, cp, groups);
         }
         return groups;
     }

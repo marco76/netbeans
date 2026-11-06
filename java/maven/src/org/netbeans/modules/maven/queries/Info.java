@@ -126,7 +126,7 @@ public final class Info implements ProjectInformation, PropertyChangeListener {
     };
     
      @Messages({
-        "# {0} - dir basename", "LBL_misconfigured_project={0} [unloadable]",
+        "# {0} - dir basename", "LBL_misconfigured_project={0} · Unavailable",
         "# {0} - path to project", "TXT_Maven_project_at=Maven project at {0}"
     })
     private String getDisplayName(NbMavenProject nb) {

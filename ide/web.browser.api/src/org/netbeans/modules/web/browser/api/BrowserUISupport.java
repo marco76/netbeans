@@ -58,7 +58,7 @@ public final class BrowserUISupport {
      * If the browser identifier is {@code null} (likely not set yet?), then the
      * selected browser will depend on whether {@code showIDEGlobalBrowserOption} is set
      * to true or not. If it is set to true then {@link #getDefaultBrowserId() IDE default}
-     * browser is selected; otherwise a browser with NetBeans Connector will be selected.
+     * browser is selected; otherwise Firefox is selected when available, with an integrated browser as fallback.
      * @param selectedBrowserId browser identifier, can be {@code null} if e.g. not set yet
      * @param showIDEGlobalBrowserOption show "IDE's Default Browser" option
      * @return model for component with browsers
@@ -75,7 +75,7 @@ public final class BrowserUISupport {
      * If the browser identifier is {@code null} (likely not set yet?), then the
      * selected browser will depend on whether {@code showIDEGlobalBrowserOption} is set
      * to true or not. If it is set to true then {@link #getDefaultBrowserId() IDE default}
-     * browser is selected; otherwise a browser with NetBeans Connector will be selected.
+     * browser is selected; otherwise Firefox is selected when available, with an integrated browser as fallback.
      * @param selectedBrowserId browser identifier, can be {@code null} if e.g. not set yet
      * @param showIDEGlobalBrowserOption show "IDE's Default Browser" option
      * @param includePhoneGap show PhoneGap browser
@@ -137,6 +137,12 @@ public final class BrowserUISupport {
         } else {
             BrowserFamilyId preferredBrowser = WebBrowsers.getIDEOptionsBrowserFamily();
             List<WebBrowser> browsers = WebBrowsers.getInstance().getAll(false, false, true, true);
+            // Firefox is the default for newly configured web projects.
+            for (WebBrowser browser : browsers) {
+                if (browser.getBrowserFamily() == BrowserFamilyId.FIREFOX) {
+                    return browser;
+                }
+            }
             // first try to find preferred browser if it has NB integration:
             for (WebBrowser bw : browsers) {
                 if (bw.getBrowserFamily() == preferredBrowser && bw.hasNetBeansIntegration()) {

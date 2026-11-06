@@ -179,6 +179,9 @@ public class BreadCrumbsTask extends ElementScanningTask {
 
         @Override
         public Image getIcon(int type) {
+            if (item.getKind() == org.netbeans.modules.csl.api.ElementKind.TAG) {
+                return BreadcrumbsController.NO_ICON;
+            }
             if (item.getCustomIcon() != null) {
                 return ImageUtilities.icon2Image(item.getCustomIcon());
             }
@@ -188,6 +191,11 @@ public class BreadCrumbsTask extends ElementScanningTask {
             } else {
                 return super.getIcon(type);
             }
+        }
+
+        @Override
+        public String getHtmlDisplayName() {
+            return item.getHtml(new org.netbeans.modules.csl.core.GsfHtmlFormatter());
         }
 
         @Override

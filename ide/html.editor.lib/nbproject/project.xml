@@ -254,6 +254,7 @@
                 </test-type>
             </test-dependencies>
             <friend-packages>
+                <friend>org.netbeans.modules.angular</friend>
                 <friend>com.ext4yii.editor</friend>
                 <friend>nl.truesoftware.blendsdk</friend>
                 <friend>org.netbeans.modules.css.visual</friend>

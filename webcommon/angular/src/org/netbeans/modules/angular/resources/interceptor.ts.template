@@ -1,0 +1,11 @@
+<#assign baseName = name?replace("[.]interceptor$", "", "r")>
+<#assign className = "">
+<#list baseName?split("[-_. ]", "r") as part>
+    <#assign className = className + part?cap_first>
+</#list>
+import { HttpInterceptorFn } from '@angular/common/http';
+
+export const ${className?uncap_first}Interceptor: HttpInterceptorFn = (request, next) => {
+  // TODO: Customize the request or response here.
+  return next(request);
+};

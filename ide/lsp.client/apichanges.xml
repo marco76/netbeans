@@ -25,6 +25,28 @@
     <apidef name="lsp_client">LSP Client API</apidef>
 </apidefs>
 <changes>
+    <change id="TemplateLanguageSupport">
+        <api name="lsp_client"/>
+        <summary>Template expression completion triggers and navigation boundaries</summary>
+        <version major="1" minor="39"/>
+        <date day="6" month="11" year="2026"/>
+        <compatibility addition="yes" binary="compatible" source="compatible"/>
+        <description><p>MIME lookup providers can identify template expressions for automatic
+        LSP completion and navigation before native HTML links.</p></description>
+        <class name="TemplateLanguageSupport" package="org.netbeans.modules.lsp.client.spi"/>
+    </change>
+    <change id="DiagnosticExplanationProvider">
+        <api name="lsp_client"/>
+        <summary>Optional educational explanations for diagnostics</summary>
+        <version major="1" minor="38"/>
+        <date day="6" month="11" year="2026"/>
+        <compatibility addition="yes" binary="compatible" source="compatible"/>
+        <description>
+            <p>MIME lookup providers can explain recognized diagnostic codes. The client offers
+            read-only guidance and shows it before applying an existing server action.</p>
+        </description>
+        <class name="DiagnosticExplanationProvider" package="org.netbeans.modules.lsp.client.spi"/>
+    </change>
     <change id="LanguageIdProvider">
         <api name="lsp_client" />
         <summary>Adding LanguageIdProvider</summary>

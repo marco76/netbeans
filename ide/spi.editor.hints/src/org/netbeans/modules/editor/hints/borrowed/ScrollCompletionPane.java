@@ -95,10 +95,17 @@ public class ScrollCompletionPane extends JScrollPane {
         scrollBarSize.width -= smallSize.width;
         scrollBarSize.height -= smallSize.height;
         setVerticalScrollBarPolicy(VERTICAL_SCROLLBAR_AS_NEEDED);              
+        Color borderColor = UIManager.getColor("Component.borderColor"); // NOI18N
+        if (borderColor == null) {
+            borderColor = UIManager.getColor("Separator.foreground"); // NOI18N
+        }
+        if (borderColor == null) {
+            borderColor = java.awt.SystemColor.controlShadow;
+        }
         setBorder(
             BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(java.awt.SystemColor.controlDkShadow), 
-                BorderFactory.createEmptyBorder(4, 4, 4, 4))); 
+                BorderFactory.createLineBorder(borderColor),
+                BorderFactory.createEmptyBorder(6, 6, 6, 6)));
         setViewportBorder( null );
         
         // initialize sizes, why are we using the same values as for the CC popup ??
@@ -117,6 +124,7 @@ public class ScrollCompletionPane extends JScrollPane {
         // Add the completion view
         view = new ListCompletionView();
         setBackground(view.getBackground());
+        getViewport().setBackground(view.getBackground());
 //        view.addListSelectionListener(listener);
         view.setResult(fixes);
         resetViewSize();

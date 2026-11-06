@@ -69,7 +69,6 @@ public class ListCompletionView extends JList {
 
     private static final Logger LOG = Logger.getLogger(ListCompletionView.class.getName());
     public static final int COMPLETION_ITEM_HEIGHT = 16;
-    private static final int DARKER_COLOR_COMPONENT = 5;
     private static final Icon icon = ImageUtilities.loadImageIcon("org/netbeans/modules/editor/hints/resources/suggestion.gif", false); // NOI18N
     private static final Icon subMenuIcon;
     private final int fixedItemHeight;
@@ -85,7 +84,8 @@ public class ListCompletionView extends JList {
         }
         
         setFont( font );
-        setFixedCellHeight(fixedItemHeight = Math.max(COMPLETION_ITEM_HEIGHT, getFontMetrics(getFont()).getHeight()));
+        setFixedCellHeight(fixedItemHeight = Math.max(icon.getIconHeight(),
+                getFontMetrics(getFont()).getHeight()) + 12);
         renderComponent = new RenderComponent();
         setCellRenderer(new ListCellRenderer() {
             private final ListCellRenderer defaultRenderer = new DefaultListCellRenderer();
@@ -102,13 +102,6 @@ public class ListCompletionView extends JList {
                         fgColor = list.getSelectionForeground();
                     } else { // not selected
                         bgColor = list.getBackground();
-                        if ((index % 2) == 0) { // every second item slightly different
-                            bgColor = new Color(
-                                    Math.abs(bgColor.getRed() - DARKER_COLOR_COMPONENT),
-                                    Math.abs(bgColor.getGreen() - DARKER_COLOR_COMPONENT),
-                                    Math.abs(bgColor.getBlue() - DARKER_COLOR_COMPONENT)
-                            );
-                        }
                         fgColor = list.getForeground();
                     }
                     // quick check Component.setBackground() always fires change
@@ -302,8 +295,12 @@ public class ListCompletionView extends JList {
             int height = getHeight();
 
             // Clear the background
-            g.setColor(bgColor);
+            g.setColor(ListCompletionView.this.getBackground());
             g.fillRect(0, 0, itemRenderWidth, height);
+            if (selected) {
+                g.setColor(bgColor);
+                g.fillRoundRect(2, 1, Math.max(0, itemRenderWidth - 4), height - 2, 8, 8);
+            }
             g.setColor(fgColor);
 
             // Render the item
@@ -331,22 +328,21 @@ public class ListCompletionView extends JList {
 
     }
 
-    private static final int BEFORE_ICON_GAP = 1;
+    private static final int BEFORE_ICON_GAP = 10;
 
-    private static final int AFTER_ICON_GAP = 4;
+    private static final int AFTER_ICON_GAP = 10;
 
-    private static final int AFTER_TEXT_GAP = 5;
+    private static final int AFTER_TEXT_GAP = 16;
 
-    private static final int AFTER_RIGHT_ICON_GAP = 3;
+    private static final int AFTER_RIGHT_ICON_GAP = 10;
 
     private static int getPreferredWidth(Fix f, Graphics g, Font defaultFont) {
         int width = BEFORE_ICON_GAP + icon.getIconWidth() + AFTER_ICON_GAP + AFTER_TEXT_GAP;
         width += (int)HtmlRenderer.renderHTML(f.getText(), g, 0, 0, Integer.MAX_VALUE, 0,
                 defaultFont, Color.black, HtmlRenderer.STYLE_CLIP, false);
 
-        if (HintsControllerImpl.getSubfixes(f).iterator().hasNext()) {
-            width += subMenuIcon.getIconWidth() + AFTER_RIGHT_ICON_GAP;
-        }
+        // Reserve the same trailing column for every row, including submenus.
+        width += subMenuIcon.getIconWidth() + AFTER_RIGHT_ICON_GAP;
         
         return width;
     }
@@ -361,13 +357,13 @@ public class ListCompletionView extends JList {
             icon.paintIcon(null, g, BEFORE_ICON_GAP, (height - icon.getIconHeight()) /2);
         }
         int iconWidth = BEFORE_ICON_GAP + icon.getIconWidth() + AFTER_ICON_GAP;
-        int textEnd = width - AFTER_ICON_GAP - subMenuIcon.getIconWidth() - AFTER_TEXT_GAP;
+        int textEnd = width - AFTER_RIGHT_ICON_GAP - subMenuIcon.getIconWidth() - AFTER_TEXT_GAP;
         FontMetrics fm = g.getFontMetrics(defaultFont);
         int textY = (height - fm.getHeight())/2 + fm.getHeight() - fm.getDescent();
 
         // Render left text
         if (textEnd > iconWidth) { // any space for left text?
-            HtmlRenderer.renderHTML(f.getText(), g, iconWidth, textY, textEnd, textY,
+            HtmlRenderer.renderHTML(f.getText(), g, iconWidth, textY, textEnd - iconWidth, height,
                 defaultFont, defaultColor, HtmlRenderer.STYLE_TRUNCATE, true);//, selected);
         }
 

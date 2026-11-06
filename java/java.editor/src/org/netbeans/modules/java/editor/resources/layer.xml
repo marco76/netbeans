@@ -77,6 +77,13 @@
                 <file name="org-netbeans-modules-java-editor-semantic-HighlightsLayerFactoryImpl.instance" />
             </folder>
             <folder name="x-java">
+                <folder name="SideBar">
+                    <file name="org-netbeans-modules-java-editor-semantic-MethodUsagesSideBarFactory.instance">
+                        <attr name="position" intvalue="1400"/>
+                        <attr name="location" stringvalue="West"/>
+                        <attr name="scrollable" boolvalue="true"/>
+                    </file>
+                </folder>
                 <attr name="SystemFileSystem.localizingBundle" stringvalue="org.netbeans.modules.java.editor.resources.Bundle"/>
                 
                 <file name="org-netbeans-modules-java-editor-semantic-HighlightsLayerFactoryImpl.instance" />

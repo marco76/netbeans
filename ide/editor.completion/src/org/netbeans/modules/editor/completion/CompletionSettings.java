@@ -64,7 +64,7 @@ public final class CompletionSettings {
      * @return true if yes
      */
     boolean documentationPopupNextToCC() {
-        return preferences.getBoolean(SimpleValueNames.JAVADOC_POPUP_NEXT_TO_CC, false);
+        return preferences.getBoolean(SimpleValueNames.JAVADOC_POPUP_NEXT_TO_CC, true);
     }
 
     public boolean completionDisplayTooltip() {

@@ -29,8 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.Action;
-import javax.swing.Icon;
-import javax.swing.JButton;
+import javax.swing.AbstractButton;
+import javax.swing.BoxLayout;
 import javax.swing.JComponent;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
@@ -279,7 +279,23 @@ public final class TerminalContainerTopComponent extends TopComponent {
 
         for (Action action : getToolbarActions()) {
             if (action instanceof Presenter.Toolbar) {
-                actionsBar.add(((Presenter.Toolbar) action).getToolbarPresenter());
+                Component presenter = ((Presenter.Toolbar) action).getToolbarPresenter();
+                if (presenter instanceof AbstractButton) {
+                    AbstractButton button = (AbstractButton) presenter;
+                    Dimension size = new Dimension(34, 34);
+                    button.setMinimumSize(size);
+                    button.setPreferredSize(size);
+                    button.setMaximumSize(size);
+                    button.setAlignmentX(Component.CENTER_ALIGNMENT);
+                    button.setMargin(new Insets(0, 0, 0, 0));
+                    button.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+                    button.setBorderPainted(false);
+                    button.setOpaque(false);
+                    button.setFocusable(false);
+                    button.setRolloverEnabled(true);
+                    button.putClientProperty("JButton.buttonType", "toolBarButton"); // NOI18N
+                }
+                actionsBar.add(presenter);
             }
         }
 
@@ -288,35 +304,12 @@ public final class TerminalContainerTopComponent extends TopComponent {
     }
 
     private void initToolbar() {
-        Insets ins = actionsBar.getMargin();
-        JButton dummy = new JButton();
-        dummy.setBorderPainted(false);
-        dummy.setOpaque(false);
-        dummy.setText(null);
-        dummy.setIcon(new Icon() {
-
-            @Override
-            public int getIconHeight() {
-                return 16;
-            }
-
-            @Override
-            public int getIconWidth() {
-                return 16;
-            }
-
-            @SuppressWarnings(value = "empty-statement")
-            @Override
-            public void paintIcon(Component c, Graphics g, int x, int y) {
-                ;
-            }
-        });
-        actionsBar.add(dummy);
-        Dimension buttonPref = dummy.getPreferredSize();
-        Dimension minDim = new Dimension(buttonPref.width + ins.left + ins.right, buttonPref.height + ins.top + ins.bottom);
-        actionsBar.setMinimumSize(minDim);
-        actionsBar.setPreferredSize(minDim);
-        actionsBar.remove(dummy);
+        actionsBar.setLayout(new BoxLayout(actionsBar, BoxLayout.Y_AXIS));
+        actionsBar.setMargin(new Insets(4, 4, 4, 4));
+        // Include the separator in the width so every presenter has the same center.
+        Dimension size = new Dimension(44, 42);
+        actionsBar.setMinimumSize(size);
+        actionsBar.setPreferredSize(size);
         actionsBar.setBorder(new RightBorder());
         actionsBar.setBorderPainted(true);
     }
@@ -348,7 +341,7 @@ public final class TerminalContainerTopComponent extends TopComponent {
 
         @Override
         public Insets getBorderInsets(Component c) {
-            return new Insets(0, 0, 0, 2);
+            return new Insets(4, 4, 4, 6);
         }
 
         @Override

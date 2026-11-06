@@ -45,7 +45,7 @@ import org.openide.util.NbBundle;
  *
  * @author   Jan Jancura
  */
-public class DebuggerAction extends AbstractAction {
+public class DebuggerAction extends AbstractAction implements org.openide.util.ContextAwareAction {
     
     private Object action;
     private boolean nameInBundle;
@@ -73,6 +73,32 @@ public class DebuggerAction extends AbstractAction {
         return super.getValue(key);
     }
     
+    @Override
+    public Action createContextAwareInstance(org.openide.util.Lookup context) {
+        if (ActionsManager.ACTION_TOGGLE_BREAKPOINT.equals(action)) {
+            var annotations = context.lookupAll(org.netbeans.spi.debugger.ui.BreakpointAnnotation.class);
+            if (!annotations.isEmpty()) {
+                // Removing an existing marker must not depend on an active
+                // engine, its MIME support, or the global editor caret.
+                var breakpoints = annotations.stream()
+                        .map(org.netbeans.spi.debugger.ui.BreakpointAnnotation::getBreakpoint)
+                        .filter(java.util.Objects::nonNull).distinct().toList();
+                if (!breakpoints.isEmpty()) {
+                    return new AbstractAction((String) getValue(Action.NAME)) {
+                        @Override
+                        public void actionPerformed(ActionEvent event) {
+                            var manager = DebuggerManager.getDebuggerManager();
+                            for (var breakpoint : breakpoints) {
+                                manager.removeBreakpoint(breakpoint);
+                            }
+                        }
+                    };
+                }
+            }
+        }
+        return this;
+    }
+
     @Override
     public void actionPerformed (ActionEvent evt) {
         // Post the action asynchronously, since we're on AWT

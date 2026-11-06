@@ -3126,7 +3126,8 @@ public abstract class JavaCompletionItem implements CompletionItem {
 
         @Override
         public int getSortPriority() {
-            return isDeprecated ? 100 + DEPRECATED : 100;
+            int rank = java.util.Arrays.asList("value", "path", "produces", "consumes").indexOf(simpleName);
+            return (isDeprecated ? 100 + DEPRECATED : 100) + (rank >= 0 ? rank : 4);
         }
 
         @Override
@@ -3191,7 +3192,18 @@ public abstract class JavaCompletionItem implements CompletionItem {
 
         @Override
         protected CharSequence getInsertPostfix(JTextComponent c) {
-            return CodeStyle.getDefault(c.getDocument()).spaceAroundAssignOps() ? " = " : "="; //NOI18N
+            String assignment = CodeStyle.getDefault(c.getDocument()).spaceAroundAssignOps() ? " = " : "=";
+            return assignment + ("String".equals(typeName) || "String[]".equals(typeName) ? "\"\"" : ""); //NOI18N
+        }
+
+        @Override
+        protected CharSequence substituteText(JTextComponent c, int offset, int length,
+                CharSequence text, CharSequence toAdd) {
+            CharSequence result = super.substituteText(c, offset, length, text, toAdd);
+            if (toAdd != null && toAdd.toString().endsWith("\"\"")) {
+                c.setCaretPosition(offset + (text != null ? text.length() : 0) + toAdd.length() - 1);
+            }
+            return result;
         }
 
         @Override

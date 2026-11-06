@@ -28,9 +28,15 @@ import org.openide.filesystems.FileObject;
 class SpringAnnotatedBeanLocation implements Location {
 
     private final FileObject fileObject;
+    private final int offset;
 
     public SpringAnnotatedBeanLocation(FileObject fileObject) {
+        this(fileObject, 0);
+    }
+
+    public SpringAnnotatedBeanLocation(FileObject fileObject, int offset) {
         this.fileObject = fileObject;
+        this.offset = Math.max(0, offset);
     }
 
     @Override
@@ -40,7 +46,7 @@ class SpringAnnotatedBeanLocation implements Location {
 
     @Override
     public int getOffset() {
-        return 0;
+        return offset;
     }
 
 }

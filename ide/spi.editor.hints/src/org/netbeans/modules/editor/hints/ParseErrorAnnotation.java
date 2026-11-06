@@ -40,7 +40,6 @@ public class ParseErrorAnnotation extends Annotation implements PropertyChangeLi
     private final String customType;
     private final FixData fixes;
     private final String description;
-    private final String shortDescription;
     private final Position lineStart;
     private final AnnotationHolder holder;
     
@@ -50,7 +49,6 @@ public class ParseErrorAnnotation extends Annotation implements PropertyChangeLi
         this.customType = null;
         this.fixes = fixes;
         this.description = description;
-        this.shortDescription = description + NbBundle.getMessage(ParseErrorAnnotation.class, "LBL_shortcut_promotion"); //NOI18N
         this.lineStart = lineStart;
         this.holder = holder;
         
@@ -64,7 +62,6 @@ public class ParseErrorAnnotation extends Annotation implements PropertyChangeLi
         this.customType = customType;
         this.fixes = fixes;
         this.description = description;
-        this.shortDescription = description + NbBundle.getMessage(ParseErrorAnnotation.class, "LBL_shortcut_promotion"); //NOI18N
         this.lineStart = lineStart;
         this.holder = holder;
         
@@ -112,7 +109,19 @@ public class ParseErrorAnnotation extends Annotation implements PropertyChangeLi
     }
 
     public String getShortDescription() {
-        return shortDescription;
+        String level;
+        switch (severity) {
+            case ERROR: level = "LBL_DiagnosticError"; break;
+            case WARNING:
+            case VERIFIER: level = "LBL_DiagnosticWarning"; break;
+            default: level = "LBL_DiagnosticSuggestion"; break;
+        }
+        String message = description.replace("&", "&amp;").replace("<", "&lt;")
+                .replace(">", "&gt;").replace("\n", "<br>");
+        String shortcut = !fixes.isComputed() || !fixes.getFixes().isEmpty()
+                ? "<br><br>" + NbBundle.getMessage(ParseErrorAnnotation.class, "LBL_shortcut_promotion").trim() : "";
+        return "<html><b>" + NbBundle.getMessage(ParseErrorAnnotation.class, level)
+                + "</b><br><br>" + message + shortcut + "</html>";
     }
 
     public void propertyChange(PropertyChangeEvent evt) {

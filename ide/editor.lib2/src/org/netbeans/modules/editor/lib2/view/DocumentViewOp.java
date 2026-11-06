@@ -922,7 +922,7 @@ public final class DocumentViewOp
         updateStatusBits(NON_PRINTABLE_CHARACTERS_VISIBLE, nonPrintableCharactersVisible);
         // Line height correction
         float lineHeightCorrectionOrig = rowHeightCorrection;
-        rowHeightCorrection = prefs.getFloat(SimpleValueNames.LINE_HEIGHT_CORRECTION, 1.0f);
+        rowHeightCorrection = prefs.getFloat(SimpleValueNames.LINE_HEIGHT_CORRECTION, EditorPreferencesDefaults.defaultLineHeightCorrection);
         boolean updateMetrics = (rowHeightCorrection != lineHeightCorrectionOrig);
         boolean releaseChildren = nonInitialUpdate && 
                 ((nonPrintableCharactersVisible != nonPrintableCharactersVisibleOrig) ||

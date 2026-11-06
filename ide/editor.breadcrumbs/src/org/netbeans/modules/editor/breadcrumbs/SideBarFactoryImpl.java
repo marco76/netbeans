@@ -120,7 +120,11 @@ public class SideBarFactoryImpl implements SideBarFactory {
         @Override
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             Color originalColor = g.getColor();
-            g.setColor (UIManager.getColor ("controlShadow")); //NOI18N
+            Color sepColor = UIManager.getColor("Separator.foreground"); // NOI18N
+            if (sepColor == null) {
+                sepColor = UIManager.getColor("controlShadow"); // NOI18N
+            }
+            g.setColor(sepColor);
             g.drawLine(0, 0, c.getWidth(), 0);
             g.setColor(originalColor);
         }

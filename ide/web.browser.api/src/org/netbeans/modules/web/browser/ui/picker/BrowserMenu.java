@@ -18,301 +18,108 @@
  */
 package org.netbeans.modules.web.browser.ui.picker;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import javax.swing.BorderFactory;
-import javax.swing.Icon;
-import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JSeparator;
-import javax.swing.UIManager;
-import javax.swing.border.EmptyBorder;
+import java.util.HashSet;
+import java.util.Set;
+import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.netbeans.modules.web.browser.api.BrowserFamilyId;
-import org.netbeans.modules.web.browser.api.WebBrowser;
+import org.netbeans.modules.web.browser.api.*;
 import org.netbeans.modules.web.browser.spi.ProjectBrowserProvider;
 import org.openide.util.ChangeSupport;
 import org.openide.util.ImageUtilities;
-import org.openide.util.NbBundle;
+import org.openide.util.RequestProcessor;
 
-/**
- * Browser selection popup.
- *
- * @author S. Aubrecht
- */
+/** Compact, keyboard-accessible browser picker with asynchronous device detection. */
 public class BrowserMenu implements ChangeListener {
-
-    private final ProjectBrowserProvider browserProvider;
+    static final boolean GTK = "GTK".equals(UIManager.getLookAndFeel().getID());
+    private static final RequestProcessor DETECTOR = new RequestProcessor(BrowserMenu.class);
     private final Collection<WebBrowser> browsers;
-    private final SelectionListFactory factory;
-    private final SelectionModel selModel;
-    private JPopupMenu popup;
+    private final ChangeSupport changes = new ChangeSupport(this);
     private WebBrowser selectedBrowser;
-    private final ChangeSupport changeSupport = new ChangeSupport( this );
-    private static final boolean windowsLaF = "Windows".equals( UIManager.getLookAndFeel().getID() ); //NOI18N
-    static final boolean GTK = "GTK".equals( UIManager.getLookAndFeel().getID() ); //NOI18N
-    private final Color windowsSeparatorColor = UIManager.getColor( "controlHighlight" ); //NOI18N
+    private JPopupMenu popup;
+    private final Set<String> available = new HashSet<>();
+    private boolean showAll;
+    private boolean detecting;
 
-    public BrowserMenu( ProjectBrowserProvider provider ) {
-        this( provider.getBrowsers(), provider.getActiveBrowser(), provider );
+    public BrowserMenu(ProjectBrowserProvider provider) {
+        this(provider.getBrowsers(), provider.getActiveBrowser());
     }
 
-    public BrowserMenu( Collection<WebBrowser> browsers, WebBrowser selectedBrowser ) {
-        this( browsers, selectedBrowser, null );
-    }
-
-    private BrowserMenu( Collection<WebBrowser> browsers, WebBrowser selectedBrowser, ProjectBrowserProvider provider ) {
-        this.browsers = browsers;
-        this.browserProvider = provider;
+    public BrowserMenu(Collection<WebBrowser> browsers, WebBrowser selectedBrowser) {
+        this.browsers = new ArrayList<>(browsers);
         this.selectedBrowser = selectedBrowser;
-        factory = SelectionListFactory.create();
-        selModel = factory.getSelectionModel();
     }
 
-    public void show( JComponent invoker, int x, int y ) {
-        JPanel panel = new JPanel();
-        panel.setOpaque( false );
-        fillContent( panel );
-
+    public void show(JComponent invoker, int x, int y) {
         popup = new JPopupMenu();
-        popup.add( panel );
-        if( windowsLaF ) {
-            popup.setBorder( BorderFactory.createLineBorder( windowsSeparatorColor.darker() ));
-        }
-        popup.show( invoker, x, y );
-    }
-
-    private void fillContent( JPanel contentPanel ) {
-        contentPanel.setLayout( new GridBagLayout() );
-
-        WebBrowser activeBrowser = selectedBrowser;
-        ArrayList<ListItemImpl> defaultItems = new ArrayList<>( browsers.size() );
-        ArrayList<ListItemImpl> mobileItems = new ArrayList<>( browsers.size() );
-        ArrayList<ListItemImpl> phoneGapItems = new ArrayList<>( browsers.size() );
-        ListItem selItem = null;
-        for( WebBrowser browser : browsers ) {
-            ListItemImpl item = new ListItemImpl( browser );
-            if( null != activeBrowser && activeBrowser.getId().equals( browser.getId() ) ) {
-                selItem = item;
+        detecting = browsers.stream().anyMatch(b -> b.getBrowserFamily().isMobile()
+                && b.getBrowserFamily() != BrowserFamilyId.PHONEGAP);
+        rebuild();
+        popup.show(invoker, x, y);
+        if (detecting) DETECTOR.post(() -> {
+            Set<String> detected = new HashSet<>();
+            for (WebBrowser browser : browsers) {
+                if (browser.getBrowserFamily().isMobile() && browser.getBrowserFamily() != BrowserFamilyId.PHONEGAP) {
+                    try {
+                        if (browser.isTargetAvailable()) detected.add(browser.getId());
+                    } catch (RuntimeException ex) {
+                        // A disconnected device or missing SDK is not an available target.
+                    }
+                }
             }
-            if( BrowserFamilyId.PHONEGAP.equals( browser.getBrowserFamily() ) ) {
-                phoneGapItems.add( item );
-            } else if( browser.getBrowserFamily().isMobile() ) {
-                mobileItems.add( item );
-            } else {
-                defaultItems.add( item );
-            }
-        }
-
-        addSection( contentPanel, defaultItems, NbBundle.getMessage(BrowserMenu.class, "Header_BROWSER"), 0, null, mobileItems.isEmpty() && phoneGapItems.isEmpty() );
-        addSection( contentPanel, mobileItems, NbBundle.getMessage(BrowserMenu.class, "Header_MOBILE"), 2, null, phoneGapItems.isEmpty() );
-        addSection( contentPanel, phoneGapItems, NbBundle.getMessage(BrowserMenu.class, "Header_PHONEGAP"), 4, createConfigureButton(), true );
-
-        JPanel panel = createBrighterPanel();
-        JLabel label = createLabel( NbBundle.getMessage(BrowserMenu.class, "Hint_NB_Connector"));
-        Color lightForeground = UIManager.getColor( "Nb.browser.picker.foreground.light" ); //NOI18N
-        if( null != lightForeground )
-            label.setForeground( lightForeground );
-        if( windowsLaF ) {
-            label.setEnabled( false );
-            panel.setBorder( BorderFactory.createMatteBorder( 1, 0, 0, 0, windowsSeparatorColor));
-        }
-        label.setBorder( BorderFactory.createEmptyBorder( 16, 17, 5, 5));
-        panel.add( label, BorderLayout.WEST );
-
-        contentPanel.add( panel, new GridBagConstraints( 0, 1, GridBagConstraints.REMAINDER, 1, 0.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.HORIZONTAL, new Insets(0,0,0,0), 0, 0 ));
-
-        if( !defaultItems.isEmpty() && !mobileItems.isEmpty() && !windowsLaF ) {
-            contentPanel.add( new JSeparator(JSeparator.VERTICAL),
-                    new GridBagConstraints( 1, 1, 1, 3, 0.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.VERTICAL, new Insets(0,0,0,0), 0, 0 ));
-        }
-
-        if( !mobileItems.isEmpty() && !phoneGapItems.isEmpty() && !windowsLaF ) {
-            contentPanel.add( new JSeparator(JSeparator.VERTICAL),
-                    new GridBagConstraints( 3, 1, 1, 3, 0.0, 1.0, GridBagConstraints.CENTER, GridBagConstraints.VERTICAL, new Insets(0,0,0,0), 0, 0 ));
-        }
-
-        if( !phoneGapItems.isEmpty() ) {
-            contentPanel.add( createLabel( NbBundle.getMessage(BrowserMenu.class, "Hint_PhoneGap")),
-                    new GridBagConstraints( 0, 4, GridBagConstraints.REMAINDER, 1, 0.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets(10,17,10,10), 0, 0 ));
-        }
-
-        if( null != selItem )
-            selModel.setSelectedItem( selItem );
-        selModel.addChangeListener( this );
-    }
-
-    @Override
-    public void stateChanged( ChangeEvent e ) {
-        ListItem selItem = selModel.getSelectedItem();
-        if( null == selItem )
-            return;
-        popup.setVisible( false );
-        selectedBrowser = ((ListItemImpl)selItem).browser;
-        changeSupport.fireChange();
-    }
-
-    private JComponent createList( List<ListItemImpl> items, boolean nbIntegrationOnly ) {
-        if( items.isEmpty() )
-            return null;
-
-        ArrayList<ListItemImpl> filteredItems = new ArrayList<>( items.size() );
-        for( ListItemImpl li : items ) {
-            if( li.browser.hasNetBeansIntegration() == nbIntegrationOnly ) {
-                filteredItems.add( li );
-            }
-        }
-        if( filteredItems.isEmpty() )
-            return null;
-
-        final SelectionList list = factory.createSelectionList();
-        list.setItems( filteredItems );
-
-        return list.getComponent();
-    }
-
-    private void addSection( JPanel contentPanel, List<ListItemImpl> items, String header, int column, JComponent bottomPart, boolean isLast ) {
-        if( items.isEmpty() )
-            return;
-
-        contentPanel.add( createHeader( header ),
-                new GridBagConstraints( column, 0, 2, 1, 0.0, 0.0, GridBagConstraints.WEST, GridBagConstraints.NONE, new Insets( 10,17,15,10), 0, 0 ));
-
-        JPanel panel = createBrighterPanel();
-        if( windowsLaF ) {
-            panel.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createMatteBorder( 0, 0, 1, 1, windowsSeparatorColor),
-                    BorderFactory.createEmptyBorder( 10, 10, 10, 10)));
-        } else {
-            panel.setBorder( BorderFactory.createEmptyBorder( 10, 10, 10, 10) );
-        }
-        if( windowsLaF && !isLast ) {
-            panel.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createMatteBorder( 0, 0, 1, 1, windowsSeparatorColor),
-                    BorderFactory.createEmptyBorder( 10, 10, 10, 10)));
-        }
-        contentPanel.add( panel,
-                new GridBagConstraints( column, 2, 1, 1, 0.0, 0.0, GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH, new Insets(0,0,0,0), 0, 0 ));
-        JComponent list = createList( items, true );
-        if( null != list ) {
-            panel.add( list, BorderLayout.CENTER );
-        }
-
-        panel = new JPanel( new BorderLayout( 0, 5 ) );
-        panel.setOpaque( false );
-        panel.setBorder( BorderFactory.createEmptyBorder(12,10,10,10));
-        list = createList( items, false );
-        if( null != list ) {
-            panel.add( list, BorderLayout.CENTER );
-        }
-        if( null != bottomPart )
-            panel.add( bottomPart, BorderLayout.SOUTH );
-
-        if( windowsLaF && !isLast ) {
-            panel.setBorder( BorderFactory.createCompoundBorder( BorderFactory.createMatteBorder( 0, 0, 0, 1, windowsSeparatorColor),
-                    BorderFactory.createEmptyBorder(18,10,10,10)) );
-        }
-        if( null != bottomPart || null != list ) {
-            contentPanel.add( panel,
-                    new GridBagConstraints( column, 3, 1, 1, 0.0, 0.0, GridBagConstraints.NORTHWEST, GridBagConstraints.BOTH, new Insets(0,0,0,0), 0, 0 ));
-        }
-    }
-
-    private JComponent createHeader( String title ) {
-        JLabel label = createLabel( title );
-        Font defaultFont = label.getFont();
-        label.setFont( defaultFont.deriveFont( Font.BOLD ).deriveFont( defaultFont.getSize2D()+2.0f ));
-        return label;
-    }
-
-    private JComponent createConfigureButton() {
-        if( null == browserProvider || !browserProvider.hasCustomizer() )
-            return null;
-        JButton button = new JButton(NbBundle.getMessage(BrowserMenu.class, "Ctl_ConfigurePhoneGap"));
-        button.addActionListener( new ActionListener() {
-
-            @Override
-            public void actionPerformed( ActionEvent e ) {
-                browserProvider.customize();
-            }
+            SwingUtilities.invokeLater(() -> {
+                available.clear(); available.addAll(detected); detecting = false;
+                if (popup.isVisible()) rebuild();
+            });
         });
-        button.setBorder( new EmptyBorder(1, 1, 1, 1) );
-        button.setMargin( new Insets(0, 0, 0, 0) );
-
-        button.setCursor( Cursor.getPredefinedCursor(Cursor.HAND_CURSOR) );
-        button.setHorizontalAlignment( JLabel.LEFT );
-        button.setFocusable( false );
-
-        button.setBorderPainted( false );
-        button.setFocusPainted( false );
-        button.setRolloverEnabled( true );
-        button.setContentAreaFilled( false );
-
-        return button;
     }
 
-    private static class ListItemImpl extends ListItem {
-        private final WebBrowser browser;
-
-        public ListItemImpl( WebBrowser browser ) {
-            this.browser = browser;
-        }
-
-        @Override
-        public Icon getIcon() {
-            return ImageUtilities.image2Icon( browser.getIconImage(false) );
-        }
-
-        @Override
-        public String getText() {
-            return browser.getName();
-        }
-    }
-
-    public void addChangeListener( ChangeListener listener ) {
-        changeSupport.addChangeListener( listener );
-    }
-
-    public void removeChangeListener( ChangeListener listener ) {
-        changeSupport.removeChangeListener( listener );
-    }
-
-    public WebBrowser getSelectedBrowser() {
-        return selectedBrowser;
-    }
-
-    private JPanel createBrighterPanel() {
-        JPanel res = new JPanel( new BorderLayout() );
-        Color background = UIManager.getColor( "Nb.browser.picker.background.light" );
-        if( null != background ) {
-            res.setOpaque( true );
-            res.setBackground( background );
-        } else {
-            res.setOpaque( false );
-        }
-        return res;
-    }
-
-    private JLabel createLabel( String text ) {
-        JLabel res = new JLabel(text);
-        if( GTK ) {
-            Color foreground = UIManager.getColor( "MenuItem.foreground"); //NOI18N
-            if( null != foreground ) {
-                res.setForeground( new Color(foreground.getRGB()) );
+    private void rebuild() {
+        popup.removeAll();
+        WebBrowser preferred = WebBrowsers.getInstance().getPreferred();
+        ArrayList<WebBrowser> sorted = new ArrayList<>(browsers);
+        sorted.sort(java.util.Comparator.comparingInt(b ->
+                b.getBrowserFamily().isMobile() ? 2 : b.getBrowserFamily() == BrowserFamilyId.FIREFOX ? 0 : 1));
+        ButtonGroup group = new ButtonGroup();
+        boolean hasMobile = false;
+        boolean mobileSection = false;
+        for (WebBrowser browser : sorted) {
+            if (browser.getBrowserFamily() == BrowserFamilyId.PHONEGAP) continue;
+            boolean selected = selectedBrowser != null && selectedBrowser.getId().equals(browser.getId());
+            if (browser.getBrowserFamily().isMobile()) {
+                hasMobile = true;
+                if (!showAll && !selected && !available.contains(browser.getId())) continue;
+                if (!mobileSection) { popup.addSeparator(); mobileSection = true; }
             }
+            String text = BrowserUISupport.getLongDisplayName(browser);
+            if (preferred != null && preferred.getId().equals(browser.getId())) text += "  ·  Default";
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(text,
+                    ImageUtilities.image2Icon(browser.getIconImage(true)), selected);
+            item.setIconTextGap(10);
+            item.setBorder(BorderFactory.createEmptyBorder(7, 10, 7, 14));
+            item.addActionListener(e -> { selectedBrowser = browser; changes.fireChange(); });
+            group.add(item); popup.add(item);
         }
-        return res;
+        if (hasMobile) {
+            popup.addSeparator();
+            JCheckBoxMenuItem all = new JCheckBoxMenuItem("Show all targets", showAll);
+            all.setToolTipText(detecting ? "Checking connected devices…" : "Include disconnected devices and emulators");
+            all.addActionListener(e -> {
+                showAll = all.isSelected(); rebuild();
+                // Menu items normally dismiss their popup; keep the expanded list open.
+                SwingUtilities.invokeLater(() -> {
+                    if (popup.getInvoker().isShowing()) popup.setVisible(true);
+                });
+            });
+            popup.add(all);
+        }
+        popup.pack();
     }
+
+    @Override public void stateChanged(ChangeEvent event) { changes.fireChange(); }
+    public void addChangeListener(ChangeListener listener) { changes.addChangeListener(listener); }
+    public void removeChangeListener(ChangeListener listener) { changes.removeChangeListener(listener); }
+    public WebBrowser getSelectedBrowser() { return selectedBrowser; }
 }

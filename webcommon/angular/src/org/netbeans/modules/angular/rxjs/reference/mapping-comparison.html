@@ -1,0 +1,16 @@
+<h3>Which mapping operator?</h3>
+<table cellpadding='5'>
+  <tr><th>Operator</th><th>When new work arrives</th><th>Typical intent</th></tr>
+  <tr><td>switchMap</td><td>Cancel previous inner subscription</td><td>Latest search result</td></tr>
+  <tr><td>concatMap</td><td>Queue and process in order</td><td>Ordered saves</td></tr>
+  <tr><td>mergeMap</td><td>Run concurrently</td><td>Independent requests</td></tr>
+  <tr><td>exhaustMap</td><td>Ignore while busy</td><td>Prevent overlapping submits</td></tr>
+</table>
+<p>Example: each inner emits its letter 3 frames after subscription and completes after 4. mergeMap uses unlimited concurrency here. | means completion.</p>
+<pre>Source      {{-ab-----c---|}}
+switchMap   {{-----b-----c|}}
+concatMap   {{----a---b---c|}}
+mergeMap    {{----ab-----c|}}
+exhaustMap  {{----a------c|}}</pre>
+<p class='caution'>Cancellation cannot undo a server-side write. Queued work can accumulate; concurrent results may arrive out of order; ignored work is discarded.</p>
+

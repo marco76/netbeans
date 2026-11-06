@@ -639,9 +639,9 @@ public class MavenModelProblemsProvider implements ProjectProblemsProvider, Inte
                 return false;
             }
             Future<?> res = saba.getPendingResult();
-            // do not enabel, if the priming build was already started.
+            // Disable while a priming build is running; allow retry after completion.
             LOG.log(Level.FINE, "Sanity build state is: {0}", res == null || res.isDone());
-            return res == null || !res.isDone();
+            return res == null || res.isDone();
         }
 
     }

@@ -105,14 +105,26 @@ public class DocumentationScrollPane extends JScrollPane {
         documentationPreferredSize = CompletionSettings.getInstance(editorComponent).documentationPopupPreferredSize();
         setPreferredSize(null); // Use the documentationPopupPreferredSize
         
-        Color bgColor = new JEditorPane().getBackground();
-        bgColor = new Color(
-                Math.max(bgColor.getRed() - 8, 0 ), 
-                Math.max(bgColor.getGreen() - 8, 0 ), 
-                bgColor.getBlue());
-        
+        Color bgColor = UIManager.getColor("nb.completion.documentation.background"); // NOI18N
+        if (bgColor == null) {
+            bgColor = UIManager.getColor("nb.completion.background"); // NOI18N
+        }
+        bgColor = CompletionJList.editorColor(bgColor, editorComponent.getBackground());
+
+        Color borderColor = UIManager.getColor("nb.completion.borderColor"); // NOI18N
+        if (borderColor == null) {
+            borderColor = UIManager.getColor("PopupMenu.borderColor"); // NOI18N
+        }
+        if (borderColor == null) {
+            borderColor = UIManager.getColor("Component.borderColor"); // NOI18N
+        }
+        if (borderColor != null) {
+            setBorder(BorderFactory.createLineBorder(borderColor, 1));
+        }
+
         // Add the completion doc view
         view = new HTMLDocView(bgColor);
+        view.setForeground(CompletionJList.editorColor(view.getForeground(), editorComponent.getForeground()));
         Integer textZoom = (Integer) editorComponent.getClientProperty(TEXT_ZOOM_PROPERTY);
         // Use the same logic as in o.n.editor.GlyphGutter.update().
         if (textZoom != null && textZoom != 0) {
@@ -125,6 +137,9 @@ public class DocumentationScrollPane extends JScrollPane {
         }
         view.addHyperlinkListener(new HyperlinkAction());
         setViewportView(view);
+        getViewport().setBackground(bgColor);
+        setViewportBorder(BorderFactory.createEmptyBorder());
+        getVerticalScrollBar().setUnitIncrement(Math.max(16, view.getFont().getSize() * 2));
 
         installTitleComponent();
         installKeybindings(editorComponent);
@@ -153,8 +168,20 @@ public class DocumentationScrollPane extends JScrollPane {
 
     private void installTitleComponent() {
         JToolBar toolbar = new JToolBar();
-        toolbar.setFloatable(false);        
-        toolbar.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, UIManager.getColor("controlDkShadow"))); //NOI18N
+        toolbar.setFloatable(false);
+        toolbar.setOpaque(true);
+        Color headerColor = UIManager.getColor("nb.completion.documentation.headerBackground"); // NOI18N
+        toolbar.setBackground(CompletionJList.editorColor(headerColor, view.getBackground()));
+        Color sepColor = UIManager.getColor("nb.completion.separatorColor"); // NOI18N
+        if (sepColor == null) {
+            sepColor = UIManager.getColor("Separator.foreground"); // NOI18N
+        }
+        if (sepColor == null) {
+            sepColor = UIManager.getColor("controlDkShadow"); // NOI18N
+        }
+        toolbar.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, sepColor),
+                BorderFactory.createEmptyBorder(5, 8, 5, 8)));
         toolbar.setLayout(new GridBagLayout());
 
         GridBagConstraints gdc = new GridBagConstraints();
@@ -170,7 +197,7 @@ public class DocumentationScrollPane extends JScrollPane {
             bBack.setEnabled(false);
             bBack.setFocusable(false);
             bBack.setContentAreaFilled(false);
-            bBack.setMargin(new Insets(0, 0, 0, 0));
+            bBack.setMargin(new Insets(4, 6, 4, 6));
             bBack.setToolTipText(NbBundle.getMessage(DocumentationScrollPane.class, "HINT_doc_browser_back_button")); //NOI18N
             toolbar.add(bBack, gdc);
         }
@@ -187,7 +214,7 @@ public class DocumentationScrollPane extends JScrollPane {
             bForward.setFocusable(false);
             bForward.setContentAreaFilled(false);
             bForward.setToolTipText(NbBundle.getMessage(DocumentationScrollPane.class, "HINT_doc_browser_forward_button")); //NOI18N
-            bForward.setMargin(new Insets(0, 0, 0, 0));
+            bForward.setMargin(new Insets(4, 6, 4, 6));
             toolbar.add(bForward, gdc);
         }
         
@@ -202,14 +229,14 @@ public class DocumentationScrollPane extends JScrollPane {
             bShowWeb.setEnabled(false);
             bShowWeb.setFocusable(false);
             bShowWeb.setContentAreaFilled(false);
-            bShowWeb.setMargin(new Insets(0, 0, 0, 0));
+            bShowWeb.setMargin(new Insets(4, 6, 4, 6));
             bShowWeb.setToolTipText(NbBundle.getMessage(DocumentationScrollPane.class, "HINT_doc_browser_show_web_button")); //NOI18N
             toolbar.add(bShowWeb, gdc);
         }
         
         gdc.gridx = 3;
         gdc.gridy = 0;
-        gdc.weightx = 1.0;
+        gdc.weightx = 0;
         gdc.anchor = GridBagConstraints.WEST;                
         icon = resolveIcon(GOTO_SOURCE);
         if (icon != null) {
@@ -219,10 +246,19 @@ public class DocumentationScrollPane extends JScrollPane {
             bGoToSource.setEnabled(false);
             bGoToSource.setFocusable(false);
             bGoToSource.setContentAreaFilled(false);
-            bGoToSource.setMargin(new Insets(0, 0, 0, 0));
+            bGoToSource.setMargin(new Insets(4, 6, 4, 6));
             bGoToSource.setToolTipText(NbBundle.getMessage(DocumentationScrollPane.class, "HINT_doc_browser_goto_source_button")); //NOI18N
             toolbar.add(bGoToSource, gdc);
         }
+        JLabel title = new JLabel(NbBundle.getMessage(DocumentationScrollPane.class, "LBL_DocumentationHeader"));
+        title.setFont(title.getFont().deriveFont(Font.BOLD));
+        Color titleColor = UIManager.getColor("nb.completion.documentation.foreground"); // NOI18N
+        if (titleColor != null) title.setForeground(titleColor);
+        gdc.gridx = 4;
+        gdc.weightx = 1;
+        gdc.anchor = GridBagConstraints.EAST;
+        gdc.insets = new Insets(0, 12, 0, 4);
+        toolbar.add(title, gdc);
         setColumnHeaderView(toolbar);
     }
     
@@ -414,6 +450,8 @@ public class DocumentationScrollPane extends JScrollPane {
         
         public BrowserButton(Icon icon){
             super(icon);
+            putClientProperty("JButton.buttonType", "toolBarButton"); // NOI18N
+            putClientProperty("JComponent.minimumWidth", 28); // NOI18N
             setBorderPainted(false);
             setFocusPainted(false);
         }

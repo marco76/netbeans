@@ -134,6 +134,17 @@ public class IDESettings  {
                 return item == null ? null : item.getInstance ();
             }
 
+            // Prefer Firefox for a fresh profile; keep explicit browser choices.
+            if (obj == null || "".equals(obj)) {
+                FileObject firefox = FileUtil.getConfigFile("Services/Browsers/FirefoxBrowser.settings"); // NOI18N
+                if (firefox != null && !Boolean.TRUE.equals(firefox.getAttribute("hidden"))) { // NOI18N
+                    InstanceCookie cookie = DataObject.find(firefox).getCookie(InstanceCookie.class);
+                    if (cookie != null && cookie.instanceCreate() instanceof HtmlBrowser.Factory browser) {
+                        return browser;
+                    }
+                }
+            }
+
             // the browser is not set yet - find the first one
             if (obj == null || "".equals (obj)) {
                 Lookup.Result<HtmlBrowser.Factory> res = Lookup.getDefault ().lookupResult (HtmlBrowser.Factory.class);

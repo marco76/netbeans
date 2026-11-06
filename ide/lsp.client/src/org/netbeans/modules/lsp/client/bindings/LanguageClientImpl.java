@@ -66,6 +66,9 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.netbeans.api.annotations.common.StaticResource;
+import org.netbeans.api.editor.mimelookup.MimeLookup;
+import org.netbeans.modules.lsp.client.spi.DiagnosticExplanationProvider;
+import org.netbeans.modules.lsp.client.spi.DiagnosticExplanationProvider.Explanation;
 import org.netbeans.api.progress.*;
 import org.netbeans.modules.lsp.client.LSPBindings;
 import org.netbeans.modules.lsp.client.Utils;
@@ -88,6 +91,7 @@ import org.openide.filesystems.FileObject;
 import org.openide.filesystems.URLMapper;
 import org.openide.util.Exceptions;
 import org.openide.util.ImageUtilities;
+import org.openide.util.NbBundle;
 import org.openide.util.RequestProcessor;
 
 /**
@@ -179,7 +183,10 @@ public class LanguageClientImpl implements LanguageClient, Endpoint {
                 }
                 assert file != null;
                 List<ErrorDescription> diags = pdp.getDiagnostics().stream().map(d -> {
-                    LazyFixList fixList = allowCodeActions ? new DiagnosticFixList(doc, pdp.getUri(), d) : ErrorDescriptionFactory.lazyListForFixes(Collections.emptyList());
+                    Explanation explanation = explanation(file, d);
+                    LazyFixList fixList = allowCodeActions || explanation != null
+                            ? new DiagnosticFixList(doc, pdp.getUri(), d, explanation)
+                            : ErrorDescriptionFactory.lazyListForFixes(Collections.emptyList());
                     return ErrorDescriptionFactory.createErrorDescription(severityMap.get(d.getSeverity()), d.getMessage(), fixList, file, Utils.getOffset(doc, d.getRange().getStart()), Utils.getOffset(doc, d.getRange().getEnd()));
                 }).collect(Collectors.toList());
                 HintsController.setErrors(doc, LanguageClientImpl.class.getName(), diags);
@@ -187,6 +194,21 @@ public class LanguageClientImpl implements LanguageClient, Endpoint {
                 LOG.log(Level.FINE, null, ex);
             }
         });
+    }
+
+    private static Explanation explanation(FileObject file, Diagnostic diagnostic) {
+        if (diagnostic.getCode() == null) return null;
+        String code = diagnostic.getCode().isLeft() ? diagnostic.getCode().getLeft()
+                : String.valueOf(diagnostic.getCode().getRight());
+        for (DiagnosticExplanationProvider provider : MimeLookup.getLookup(file.getMIMEType()).lookupAll(DiagnosticExplanationProvider.class)) {
+            try {
+                Explanation explanation = provider.explain(file, code);
+                if (explanation != null) return explanation;
+            } catch (RuntimeException ex) {
+                LOG.log(Level.FINE, "Diagnostic explanation provider failed", ex);
+            }
+        }
+        return null;
     }
 
     private static final Map<DiagnosticSeverity, Severity> severityMap = new EnumMap<>(DiagnosticSeverity.class);
@@ -325,11 +347,13 @@ public class LanguageClientImpl implements LanguageClient, Endpoint {
         private final String fileUri;
         private final Document doc;
         private final Diagnostic diagnostic;
+        private final Explanation explanation;
         private List<Fix> fixes;
         private boolean computing;
         private boolean computed;
 
-        public DiagnosticFixList(Document doc, String fileUri, Diagnostic diagnostic) {
+        public DiagnosticFixList(Document doc, String fileUri, Diagnostic diagnostic, Explanation explanation) {
+            this.explanation = explanation;
             this.doc = doc;
             this.fileUri = fileUri;
             this.diagnostic = diagnostic;
@@ -357,34 +381,54 @@ public class LanguageClientImpl implements LanguageClient, Endpoint {
                 computing = true;
                 bindings.runOnBackground(() -> {
                     try {
-                        List<Fix> newFixes = Collections.emptyList();
+                        List<Fix> newFixes = new ArrayList<>();
+                        if (explanation != null) newFixes.add(new Fix() {
+                            @Override public String getText() {
+                                return NbBundle.getMessage(LanguageClientImpl.class, "Explain.action");
+                            }
+                            @Override public ChangeInfo implement() {
+                                DiagnosticExplanationUI.show(explanation, null);
+                                return null;
+                            }
+                        });
 
-                        if (Utils.getOffset(doc, diagnostic.getRange().getEnd()) < doc.getEndPosition().getOffset()) {
+                        if (allowCodeActions && Utils.getOffset(doc, diagnostic.getRange().getEnd()) < doc.getEndPosition().getOffset()) {
                             List<Either<Command, CodeAction>> commands
                                     = bindings.getTextDocumentService().codeAction(new CodeActionParams(new TextDocumentIdentifier(fileUri),
                                             diagnostic.getRange(),
                                             new CodeActionContext(Collections.singletonList(diagnostic)))).get();
 
                             if (commands != null) {
-                                newFixes = commands.stream()
+                                newFixes.addAll(commands.stream()
+                                        .filter(cmd -> cmd.isLeft() || cmd.getRight().getDisabled() == null)
                                         .map(cmd -> new CommandBasedFix(cmd))
-                                        .collect(Collectors.toList());
+                                        .collect(Collectors.toList()));
                             }
                         }
 
-                        synchronized (this) {
-                            this.fixes = Collections.unmodifiableList(newFixes);
-                            this.computed = true;
-                            this.computing = false;
-                        }
-                        pcs.firePropertyChange(PROP_COMPUTED, null, null);
-                        pcs.firePropertyChange(PROP_FIXES, null, null);
+                        complete(newFixes);
                     } catch (InterruptedException | ExecutionException ex) {
+                        if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
                         LOG.log(Level.INFO, "Failure fetching DiagnosticFixList (at least typescript server has known problems)", ex);
+                        List<Fix> fallback = explanation == null ? Collections.emptyList() : List.of(new Fix() {
+                            @Override public String getText() { return NbBundle.getMessage(LanguageClientImpl.class, "Explain.action"); }
+                            @Override public ChangeInfo implement() { DiagnosticExplanationUI.show(explanation, null); return null; }
+                        });
+                        complete(fallback);
                     }
                 });
             }
             return fixes;
+        }
+
+        private void complete(List<Fix> result) {
+            synchronized (this) {
+                fixes = Collections.unmodifiableList(new ArrayList<>(result));
+                computed = true;
+                computing = false;
+            }
+            pcs.firePropertyChange(PROP_COMPUTED, null, null);
+            pcs.firePropertyChange(PROP_FIXES, null, null);
         }
 
         @Override
@@ -407,7 +451,7 @@ public class LanguageClientImpl implements LanguageClient, Endpoint {
 
             @Override
             public ChangeInfo implement() throws Exception {
-                Utils.applyCodeAction(bindings, cmd);
+                DiagnosticExplanationUI.apply(explanation, getText(), () -> Utils.applyCodeAction(bindings, cmd));
                 return null;
             }
         }

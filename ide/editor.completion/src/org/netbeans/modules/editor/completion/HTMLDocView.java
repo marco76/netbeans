@@ -60,7 +60,9 @@ public class HTMLDocView extends JEditorPane {
         setEditable(false);
         setFocusable(true);
         setBackground(bgColor);
-        setMargin(new Insets(0, 3, 3, 3));
+        setMargin(new Insets(12, 16, 14, 16));
+        Color foreground = javax.swing.UIManager.getColor("nb.completion.documentation.foreground");
+        if (foreground != null) setForeground(foreground);
         
         //add listeners for selection support
         addMouseListener(new MouseListener() {
@@ -105,6 +107,9 @@ public class HTMLDocView extends JEditorPane {
             public void mouseMoved(MouseEvent e) {}
         });
         putClientProperty( JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE );
+        // JEditorPane can initialize its kit before this constructor applies popup colors.
+        setBodyFontInCSS();
+        setDocument(htmlKit.createDefaultDocument());
     }
 
     private int positionCaret(MouseEvent event) {
@@ -121,7 +126,7 @@ public class HTMLDocView extends JEditorPane {
     public void setContent(final String content, final String reference) {
         SwingUtilities.invokeLater(new Runnable(){
             public void run(){
-                Reader in = new StringReader("<HTML><BODY>"+content+"</BODY></HTML>");//NOI18N                
+                Reader in = new StringReader(asHtmlDocument(content)); // NOI18N
                 try{
                     Document doc = getDocument();
                     doc.remove(0, doc.getLength());
@@ -145,6 +150,15 @@ public class HTMLDocView extends JEditorPane {
         });
     }
     
+    /** Providers can return either a body fragment or a complete HTML document. */
+    static String asHtmlDocument(String content) {
+        String start = content.stripLeading();
+        boolean complete = java.util.regex.Pattern.compile(
+                "(?is)^(?:<!doctype\\s+html[^>]*>\\s*)?<html(?:\\s|>).*", java.util.regex.Pattern.DOTALL)
+                .matcher(start).matches();
+        return complete ? content : "<html><body>" + content + "</body></html>";
+    }
+
     protected EditorKit createDefaultEditorKit() {
         // it is extremelly slow to init it
         if (htmlKit == null){
@@ -173,17 +187,44 @@ public class HTMLDocView extends JEditorPane {
         javax.swing.text.html.StyleSheet css =
                 new javax.swing.text.html.StyleSheet();
         Font editorFont = new EditorUI().getDefaultColoring().getFont();
-        // do not use monospaced font, just adjust fontsize
-        Font useFont =
-            new Font(getFont().getFamily(), Font.PLAIN, editorFont.getSize());
+        Font uiFont = javax.swing.UIManager.getFont("Label.font");
+        if (uiFont == null) uiFont = getFont();
+        Font useFont = new Font(uiFont.getFamily(), Font.PLAIN, Math.max(12, editorFont.getSize()));
         setFont(useFont);
-        try {
-            css.addRule(new StringBuilder("body, div { font-size: ").append(useFont.getSize()) // NOI18N
-                    .append("; font-family: ").append(useFont.getFamily()).append(";}").toString()); // NOI18N
-        } catch (Exception e) {
-        }
+        Color foreground = color("nb.completion.documentation.foreground", getForeground());
+        Color background = getBackground();
+        Color codeBackground = color("nb.completion.documentation.codeBackground", blend(background, foreground, 0.06));
+        Color separator = color("nb.completion.separatorColor", blend(background, foreground, 0.18));
+        Color link = color("nb.html.link.foreground", foreground);
+        css.addRule("body { font-family: '" + useFont.getFamily() + "'; font-size: " + useFont.getSize()
+                + "pt; color: " + hex(foreground) + "; background-color: " + hex(background) + "; margin: 0; }"); // NOI18N
+        css.addRule("p { margin-top: 6px; margin-bottom: 10px; }"); // NOI18N
+        css.addRule("h1, h2, h3, h4 { margin-top: 12px; margin-bottom: 6px; }"); // NOI18N
+        css.addRule("h1 { font-size: 125%; } h2 { font-size: 115%; } h3, h4 { font-size: 105%; }"); // NOI18N
+        css.addRule("a { color: " + hex(link) + "; text-decoration: none; }"); // NOI18N
+        css.addRule("code, pre, tt { font-family: '" + editorFont.getFamily() + "'; font-size: 100%; }"); // NOI18N
+        css.addRule("code, tt { background-color: " + hex(codeBackground) + "; }"); // NOI18N
+        css.addRule("pre { background-color: " + hex(codeBackground) + "; padding: 10px; margin-top: 8px; margin-bottom: 12px; }"); // NOI18N
+        css.addRule("ul, ol { margin-left: 20px; margin-top: 6px; margin-bottom: 10px; } li { margin-bottom: 4px; }"); // NOI18N
+        css.addRule("th { background-color: " + hex(codeBackground) + "; text-align: left; } td, th { padding: 5px; }"); // NOI18N
+        css.addRule("hr { color: " + hex(separator) + "; margin-top: 10px; margin-bottom: 10px; }"); // NOI18N
         css.addStyleSheet(htmlKit.getStyleSheet());
         htmlKit.setStyleSheet(css);
 
     }
+    private static Color color(String key, Color fallback) {
+        Color value = javax.swing.UIManager.getColor(key);
+        return value != null ? value : fallback;
+    }
+
+    private static Color blend(Color background, Color foreground, double amount) {
+        return new Color((int) (background.getRed() * (1 - amount) + foreground.getRed() * amount),
+                (int) (background.getGreen() * (1 - amount) + foreground.getGreen() * amount),
+                (int) (background.getBlue() * (1 - amount) + foreground.getBlue() * amount));
+    }
+
+    private static String hex(Color color) {
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()); // NOI18N
+    }
+
 }

@@ -127,7 +127,7 @@ public class MarkdownDataObject extends MultiDataObject {
     )
     @Messages("LBL_Markdown_EDITOR=Source")
     public static MultiViewEditorElement createEditor(Lookup lkp) {
-        return new MultiViewEditorElement(lkp);
+        return new MarkdownSourceElement(lkp);
     }
 
 }

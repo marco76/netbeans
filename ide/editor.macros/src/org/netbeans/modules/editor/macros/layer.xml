@@ -41,11 +41,15 @@
         </folder>
         <folder name="Toolbars">
             <folder name="Default">
+                <file name="Separator-before-macros.instance">
+                    <attr name="instanceClass" stringvalue="javax.swing.JSeparator"/>
+                    <attr name="position" intvalue="20000"/>
+                </file>
                 <file name="start-macro-recording">
-                    <attr name="position" intvalue="18000"/>
+                    <attr name="position" intvalue="21000"/>
                 </file>
                 <file name="stop-macro-recording">
-                    <attr name="position" intvalue="19000"/>
+                    <attr name="position" intvalue="22000"/>
                 </file>
             </folder>
         </folder>

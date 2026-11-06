@@ -74,6 +74,7 @@ import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectUtils;
 import org.netbeans.api.project.SourceGroup;
 import org.netbeans.modules.micronaut.db.Utils;
+import org.netbeans.modules.micronaut.spring.SpringWebSymbolHelper;
 import org.netbeans.modules.parsing.api.Snapshot;
 import org.netbeans.modules.parsing.spi.Parser;
 import org.netbeans.modules.parsing.spi.indexing.Context;
@@ -100,6 +101,7 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
     private static final String[] META_ANNOTATIONS = new String[] {
         "io.micronaut.http.annotation.HttpMethodMapping",
         "io.micronaut.context.annotation.Bean",
+        SpringWebSymbolHelper.SPRING_COMPONENT_ANNOTATION,
         "jakarta.inject.Qualifier",
         "jakarta.inject.Scope"
     };
@@ -154,7 +156,7 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
                 if (ret == null) {
                     ClassPath cp = ClassPath.getClassPath(root, ClassPath.COMPILE);
                     cp.addPropertyChangeListener(WeakListeners.propertyChange(this, cp));
-                    ret = resolveClassName(cp, HTTP_METHOD_MAPPING_ANNOTATION, MANAGEMENT_ENDPOINT_ANNOTATION, AWS_FUNCTION, OCI_FUNCTION);
+                    ret = resolveClassName(cp, HTTP_METHOD_MAPPING_ANNOTATION, MANAGEMENT_ENDPOINT_ANNOTATION, SpringWebSymbolHelper.SPRING_REQUEST_MAPPING_ANNOTATION, AWS_FUNCTION, OCI_FUNCTION);
                     map.put(root, ret);
                 }
                 return ret;
@@ -183,7 +185,8 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
                 if (cls != null) {
                     Pair<AnnotationMirror, AnnotationMirror> metaAnnotated = isMetaAnnotated(cls);
                     if (metaAnnotated != null) {
-                        path = getPath(metaAnnotated.first());
+                        String reqPath = SpringWebSymbolHelper.getClassRequestMappingPath((TypeElement) cls);
+                        path = reqPath != null ? reqPath : getPath(metaAnnotated.first());
                         Element annEl = metaAnnotated.first().getAnnotationType().asElement();
                         String name = "@+ '" + getBeanName(node.getSimpleName().toString()) + "' (@" + annEl.getSimpleName()
                                 + (metaAnnotated.second() != null ? " <: @" + metaAnnotated.second().getAnnotationType().asElement().getSimpleName() : "")
@@ -217,23 +220,32 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
                     while (it.hasNext()) {
                         ExecutableElement ee = it.next();
                         for (AnnotationMirror ann : ee.getAnnotationMirrors()) {
-                            String method = getEndpointMethod((TypeElement) ann.getAnnotationType().asElement());
+                            String method = getEndpointMethod(ann);
                             if (method != null) {
                                 List<String> ids = new ArrayList<>();
                                 for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : ann.getElementValues().entrySet()) {
                                     if ("value".contentEquals(entry.getKey().getSimpleName()) || "uri".contentEquals(entry.getKey().getSimpleName())) {
-                                        ids.add((String) entry.getValue().getValue());
+                                        Object val = entry.getValue().getValue();
+                                        if (val instanceof String) {
+                                            ids.add((String) val);
+                                        }
                                     } else if ("uris".contentEquals(entry.getKey().getSimpleName())) {
-                                        for (AnnotationValue av : (List<AnnotationValue>) entry.getValue().getValue()) {
-                                            ids.add((String) av.getValue());
+                                        for (Object val : (List<?>) entry.getValue().getValue()) {
+                                            if (val instanceof AnnotationValue) {
+                                                Object v = ((AnnotationValue) val).getValue();
+                                                if (v instanceof String) {
+                                                    ids.add((String) v);
+                                                }
+                                            }
                                         }
                                     }
                                 }
+                                SpringWebSymbolHelper.extractPathIds(ann, ids);
                                 if (ids.isEmpty()) {
                                     ids.add(getId(ee));
                                 }
                                 for (Object id : ids) {
-                                    String name = '@' + path + id + " -- " + method;
+                                    String name = '@' + SpringWebSymbolHelper.joinPaths(path, id) + " -- " + method;
                                     int[] span = cc.getTreeUtilities().findNameSpan(node);
                                     if (selectEndpointAnnotation) {
                                         Tree tree = cc.getTrees().getTree(ee, ann);
@@ -309,6 +321,14 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
         return null;
     }
 
+    private static String getEndpointMethod(AnnotationMirror annotation) {
+        TypeElement type = (TypeElement) annotation.getAnnotationType().asElement();
+        if (SpringWebSymbolHelper.SPRING_REQUEST_MAPPING_ANNOTATION.contentEquals(type.getQualifiedName())) {
+            return SpringWebSymbolHelper.getEndpointMethod(annotation);
+        }
+        return getEndpointMethod(type);
+    }
+
     public static String getEndpointMethod(TypeElement te) {
         switch (te.getQualifiedName().toString()) {
             case MANAGEMENT_READ_ANNOTATION:
@@ -324,8 +344,8 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
                         return te.getSimpleName().toString().toUpperCase();
                     }
                 }
+                return SpringWebSymbolHelper.getEndpointMethod(te);
         }
-        return null;
     }
 
     private static String getBeanName(String typeName) {
@@ -356,6 +376,9 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
                         path = (String) entry.getValue().getValue();
                     }
                 }
+                break;
+            default:
+                path = SpringWebSymbolHelper.getControllerPath(ann);
                 break;
         }
         if (path != null && !path.startsWith("/")) {
@@ -625,7 +648,7 @@ public final class MicronautSymbolFinder extends EmbeddingIndexer implements Pro
             while (it.hasNext()) {
                 ExecutableElement ee = it.next();
                 for (AnnotationMirror ann : ee.getAnnotationMirrors()) {
-                    String method = getEndpointMethod((TypeElement) ann.getAnnotationType().asElement());
+                    String method = getEndpointMethod(ann);
                     if (method != null) {
                         List<String> ids = new ArrayList<>();
                         for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> entry : ann.getElementValues().entrySet()) {

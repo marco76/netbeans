@@ -1,0 +1,12 @@
+<#assign baseName = name?replace("[.]resolver$", "", "r")>
+<#assign className = "">
+<#list baseName?split("[-_. ]", "r") as part>
+    <#assign className = className + part?cap_first>
+</#list>
+import { ResolveFn } from '@angular/router';
+
+// TODO: Replace unknown with your resolved data type.
+export const ${className?uncap_first}Resolver: ResolveFn<unknown> = (route, state) => {
+  // TODO: Return data or an Observable from your service.
+  throw new Error('Implement ${className?uncap_first}Resolver before using it in a route.');
+};

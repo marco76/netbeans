@@ -128,19 +128,31 @@ public final class WebBrowser {
         return factoryDesc.getName();
     }
 
+    /** Whether this target is available. Device detection may block; call off the EDT. */
+    public boolean isTargetAvailable() {
+        if (factoryDesc.getFactory() instanceof org.netbeans.modules.web.browser.spi.EnhancedBrowserFactory factory) {
+            return factory.isTargetAvailable();
+        }
+        return !getBrowserFamily().isMobile();
+    }
+
     public Image getIconImage(boolean small) {
-        Image im = factoryDesc.getIconImage(small);
-        if (im == null) {
-            ImageIcon icon = ImageUtilities.loadImageIcon( getIconFile(getBrowserFamily(), small), true );
-            im = ImageUtilities.icon2Image( icon );
+        String family = switch (getBrowserFamily()) {
+            case FIREFOX, MOZILLA -> "firefox";
+            case CHROME, CHROMIUM -> "chrome";
+            case SAFARI -> "safari";
+            case EDGE -> "edge";
+            case ANDROID -> "android";
+            case IOS -> "ios";
+            case JAVAFX_WEBVIEW, UNKNOWN -> "generic";
+            default -> null;
+        };
+        if (family != null) {
+            return ImageUtilities.loadImage("org/netbeans/modules/web/browser/ui/resources/modern_"
+                    + family + (small ? "_16.svg" : "_24.svg")); // NOI18N
         }
-        if (hasNetBeansIntegration() && factoryDesc.getBrowserFamily() != BrowserFamilyId.JAVAFX_WEBVIEW) {
-//            im = ImageUtilities.mergeImages(
-//                im,
-//                ImageUtilities.loadImage("org/netbeans/modules/web/browser/ui/resources/nb-badge.png"),
-//            12, 12);
-        }
-        return im;
+        Image image = factoryDesc.getIconImage(small);
+        return image != null ? image : ImageUtilities.loadImage(getIconFile(getBrowserFamily(), small));
     }
     
     public BrowserFamilyId getBrowserFamily() {

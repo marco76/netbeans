@@ -136,6 +136,7 @@ import org.openide.filesystems.FileSystem;
  */
 public class ElementJavadoc {
 
+    private static final String OPEN_ONLINE_JDOC = "open-online-javadoc:"; //NOI18N
     private static final String ASSOCIATE_JDOC = "associate-javadoc:";          //NOI18N
     private static final String API = "/api";                                   //NOI18N
     private static final Set<String> LANGS;
@@ -247,6 +248,17 @@ public class ElementJavadoc {
      * @return ElementJavadoc describing the javadoc of liked element
      */
     public ElementJavadoc resolveLink(final String link) {
+        if (link.startsWith(OPEN_ONLINE_JDOC)) {
+            try {
+                URL online = new URL(link.substring(OPEN_ONLINE_JDOC.length()));
+                if ("https".equals(online.getProtocol()) && "javadoc.io".equals(online.getHost())) {
+                    org.openide.awt.HtmlBrowser.URLDisplayer.getDefault().showURL(online);
+                }
+            } catch (MalformedURLException ex) {
+                Exceptions.printStackTrace(ex);
+            }
+            return this;
+        }
         if (link.startsWith(ASSOCIATE_JDOC)) {
             final String root = link.substring(ASSOCIATE_JDOC.length());
             try {
@@ -1265,15 +1277,70 @@ public class ElementJavadoc {
                     if (userRoot == null) {
                         userRoot = root;
                     }
+                    String online = onlineJavadoc(root, toSearch);
                     return NbBundle.getMessage(
                                 ElementJavadoc.class,
-                                "javadoc_content_not_found_attach",
+                                online != null ? "javadoc_content_not_found_download" : "javadoc_content_not_found_attach",
                                 rootURL.toExternalForm(),
-                                FileUtil.getFileDisplayName(userRoot));
+                                FileUtil.getFileDisplayName(userRoot), online != null ? online : "");
                 }
             }
         }
         return NbBundle.getMessage(ElementJavadoc.class, "javadoc_content_not_found"); //NOI18N
+    }
+
+    /** Maven archives carry their exact coordinates even outside the local repository. */
+    private static String onlineJavadoc(FileObject root, String resource) {
+        FileObject metadata = root.getFileObject("META-INF/maven"); //NOI18N
+        String result = null;
+        for (FileObject group : metadata != null ? metadata.getChildren() : new FileObject[0]) {
+            for (FileObject artifact : group.getChildren()) {
+                FileObject pom = artifact.getFileObject("pom.properties"); //NOI18N
+                if (pom == null) {
+                    continue;
+                }
+                java.util.Properties properties = new java.util.Properties();
+                try (java.io.InputStream input = pom.getInputStream()) {
+                    properties.load(input);
+                    String g = properties.getProperty("groupId", ""); //NOI18N
+                    String a = properties.getProperty("artifactId", ""); //NOI18N
+                    String v = properties.getProperty("version", ""); //NOI18N
+                    if (g.matches("[A-Za-z0-9_.-]+") && a.matches("[A-Za-z0-9_.-]+")
+                            && v.matches("[A-Za-z0-9_.-]+")) {
+                        // Shaded archives may contain several artifacts: avoid guessing.
+                        if (result != null) {
+                            return null;
+                        }
+                        result = "https://javadoc.io/doc/" + g + "/" + a + "/" + v + "/"
+                                + resource.replace(".class", ".html").replace('$', '.'); //NOI18N
+                    }
+                } catch (java.io.IOException ex) {
+                    return null;
+                }
+            }
+        }
+        if (result == null) {
+            FileObject archive = FileUtil.getArchiveFile(root);
+            if (archive != null) {
+                String path = archive.getPath().replace('\\', '/');
+                int repository = path.lastIndexOf("/.m2/repository/"); //NOI18N
+                if (repository >= 0) {
+                    String[] parts = path.substring(repository + "/.m2/repository/".length()).split("/");
+                    if (parts.length >= 4) {
+                        String a = parts[parts.length - 3];
+                        String v = parts[parts.length - 2];
+                        String g = String.join(".", java.util.Arrays.copyOf(parts, parts.length - 3));
+                        if (g.matches("[A-Za-z0-9_.-]+") && a.matches("[A-Za-z0-9_.-]+")
+                                && v.matches("[A-Za-z0-9_.-]+")
+                                && parts[parts.length - 1].equals(a + "-" + v + ".jar")) {
+                            result = "https://javadoc.io/doc/" + g + "/" + a + "/" + v + "/"
+                                    + resource.replace(".class", ".html").replace('$', '.'); //NOI18N
+                        }
+                    }
+                }
+            }
+        }
+        return result;
     }
 
     private StringBuilder inlineTags(List<? extends DocTree> tags, TreePath docPath, DocCommentTree doc, DocTrees trees, CharSequence inherited) {

@@ -1,0 +1,19 @@
+<#assign baseName = name?replace("[.]spec$", "", "r")>
+<#assign className = "">
+<#list baseName?split("[-_. ]", "r") as part>
+    <#assign className = className + part?cap_first>
+</#list>
+import { TestBed } from '@angular/core/testing';
+
+// Use the test globals or imports configured by your workspace's test runner.
+// TODO: Import the component or service from './${baseName}'.
+describe('${className}', () => {
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [], // Add standalone components here.
+      providers: [] // Add services and their dependencies here.
+    }).compileComponents();
+  });
+
+  // TODO: Add tests using TestBed.createComponent() or TestBed.inject().
+});

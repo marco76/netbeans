@@ -1543,7 +1543,21 @@ public final class AnnotationHolder implements ChangeListener, DocumentListener 
     private static final class TooltipResolver implements HighlightAttributeValue<String> {
 
         public String getValue(final JTextComponent component, final Document document, Object attributeKey, final int startOffset, final int endOffset) {
-            return resolveWarnings(document, startOffset, endOffset) + NbBundle.getMessage(AnnotationHolder.class, "LBL_shortcut_promotion");
+            try {
+                final Position position = document.createPosition(startOffset);
+                component.getActionMap().put(HintTooltip.SHOW_HINTS_ACTION, new javax.swing.AbstractAction() {
+                    @Override
+                    public void actionPerformed(java.awt.event.ActionEvent event) {
+                        if (component.getDocument() != document) return;
+                        component.setCaretPosition(position.getOffset());
+                        component.requestFocusInWindow();
+                        SwingUtilities.invokeLater(() -> HintsUI.getDefault().invokeDefaultAction(false));
+                    }
+                });
+            } catch (BadLocationException ex) {
+                return null;
+            }
+            return HintTooltip.format(resolveWarnings(document, startOffset, endOffset));
         }
 
     }

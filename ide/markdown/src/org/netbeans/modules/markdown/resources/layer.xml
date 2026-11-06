@@ -24,8 +24,13 @@
     <folder name="Editors">
         <folder name="text">
             <folder name="markdown">
+                <folder name="FontsColors">
+                    <folder name="NetBeans"><folder name="Defaults"><file name="Markdown-source.xml" url="Markdown-source-NetBeans.xml"/></folder></folder>
+                    <folder name="FlatLafDark"><folder name="Defaults"><file name="Markdown-source.xml" url="Markdown-source-FlatLafDark.xml"/></folder></folder>
+                </folder>
+                <folder name="Preferences"><folder name="Defaults"><file name="markdown-preferences.xml" url="Markdown-preferences.xml"/></folder></folder>
                 <folder name="TokenListProvider">
-                    <file name="org-netbeans-modules-spellchecker-plain-PlainTokenListProvider.instance" />
+                    <file name="org-netbeans-modules-spellchecker-plain-MarkdownTokenListProvider.instance" />
                 </folder>
                 <folder name="CompletionProviders">
                     <file name="org-netbeans-modules-spellchecker-completion-WordCompletion.instance">

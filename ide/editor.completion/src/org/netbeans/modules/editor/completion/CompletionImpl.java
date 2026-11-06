@@ -739,6 +739,13 @@ CaretListener, KeyListener, FocusListener, ListSelectionListener, PropertyChange
     private void dispatchKeyEvent(KeyEvent e) {
         if (e == null)
             return;
+        // Let the editor's Start New Line action handle Shift+Enter, even
+        // when a completion item is selected. Do not consume the event.
+        if (e.getID() == KeyEvent.KEY_PRESSED && e.getKeyCode() == KeyEvent.VK_ENTER
+                && e.getModifiersEx() == InputEvent.SHIFT_DOWN_MASK) {
+            hideAll();
+            return;
+        }
         KeyStroke ks = KeyStroke.getKeyStrokeForEvent(e);
         JTextComponent comp = getActiveComponent();
         boolean compEditable = (comp != null && comp.isEditable());

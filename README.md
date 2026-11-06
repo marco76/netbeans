@@ -23,6 +23,13 @@
 
 Apache NetBeans is an open source development environment, tooling platform, and application framework.
 
+### AlpLibre IDE additions
+
+- [Angular workspaces, code generation and Firefox debugging](webcommon/angular/README.md)
+- [Presentation and code walkthroughs](ide/presenter/README.md)
+- [Full Stack Connections and module responsibilities](enterprise/fullstack/README.md)
+- [Lombok setup and editor quick fixes for Maven projects](java/maven/README.md)
+
 ### Build status
    * GitHub actions
      * [![Build Status](https://github.com/apache/netbeans/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/apache/netbeans/actions/workflows/main.yml)

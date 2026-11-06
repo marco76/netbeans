@@ -174,7 +174,7 @@ case "`uname`" in
     Darwin*)
         eval launchNbexec \
             --jdkhome '"$netbeans_jdkhome"' \
-            -J-Xdock:name=NetBeans \
+            '-J-Xdock:name="AlpLibre IDE"' \
             '"-J-Xdock:icon=$basedir/nb/netbeans.icns"' \
             --branding nb \
             --clusters '"$netbeans_clusters"' \

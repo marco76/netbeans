@@ -81,9 +81,9 @@ public class ETCompletionContextResolver implements CompletionContextResolver {
             result = completecreateNamedQueryparameters(ctx, result);
         } else if (CCParser.CREATE_QUERY.equals(methodName)){
             completeJPQLContext(ctx, ctx.getMethod(), result);
-        } else if("NamedQuery".equals(annotationName)){//NOI18N
+        } else if ( isNamedQueryAnnotation(annotationName) ) {//NOI18N
             completeJPQLContext(ctx, parsedNN, nnattr, result);
-        } else if("Query".equals(annotationName) && parsedNN.getAttributesList().size() == 1){//NOI18N
+        } else if ( isJpqlQueryAnnotation(annotationName, parsedNN) ) {//NOI18N
             Element cls = ctx.getJavaClass();
             if (cls == null || !checkForRepositoryAnnotation(cls.getAnnotationMirrors(), new HashSet<>())) {
                 completeJPQLContext(ctx, parsedNN, nnattr, result);
@@ -123,7 +123,7 @@ public class ETCompletionContextResolver implements CompletionContextResolver {
      private List<JPACompletionItem> completeJPQLContext(JPACodeCompletionProvider.Context ctx, CCParser.CC nn, CCParser.NNAttr nnattr, List<JPACompletionItem> results) {
         String completedMember = nnattr.getName();
 
-        if (completedMember == null || "query".equals(completedMember)) { // NOI18N
+        if (completedMember == null || "query".equals(completedMember) || "value".equals(completedMember) || "countQuery".equals(completedMember)) { // NOI18N
             String completedValue = nnattr.getValue().toString() == null ? "" : nnattr.getValue().toString();
             DefaultJPQLQueryHelper helper = new DefaultJPQLQueryHelper(DefaultJPQLGrammar.instance());
 
@@ -223,6 +223,23 @@ public class ETCompletionContextResolver implements CompletionContextResolver {
         }
     }
 
+    private static boolean isNamedQueryAnnotation(String annotationName) {
+        return "NamedQuery".equals(annotationName) //NOI18N
+                || "javax.persistence.NamedQuery".equals(annotationName) //NOI18N
+                || "jakarta.persistence.NamedQuery".equals(annotationName); //NOI18N
+    }
+
+    private static boolean isJpqlQueryAnnotation(String annotationName, CCParser.CC parsedNN) {
+        if (annotationName == null || parsedNN == null || SPRING_JDBC_QUERY_ANNOTATION_NAME.equals(annotationName)) {
+            return false;
+        }
+        if (!"Query".equals(annotationName) && !annotationName.endsWith(".Query")) { //NOI18N
+            return false;
+        }
+        Object nativeQueryVal = parsedNN.getAttributes().get("nativeQuery"); //NOI18N
+        return !"true".equalsIgnoreCase(nativeQueryVal != null ? nativeQueryVal.toString().trim() : null); //NOI18N
+    }
+
     private static boolean checkForRepositoryAnnotation(List<? extends AnnotationMirror> annotations, HashSet<TypeElement> checked) {
         for (AnnotationMirror annotation : annotations) {
             TypeElement annotationElement = (TypeElement) annotation.getAnnotationType().asElement();
@@ -234,6 +251,7 @@ public class ETCompletionContextResolver implements CompletionContextResolver {
     }
 
     private static final String REPOSITORY_ANNOTATION_NAME = "io.micronaut.data.jdbc.annotation.JdbcRepository";
+    private static final String SPRING_JDBC_QUERY_ANNOTATION_NAME = "org.springframework.data.jdbc.repository.query.Query";
 
     private static final boolean DEBUG = Boolean.getBoolean("debug." + ETCompletionContextResolver.class.getName());
 }

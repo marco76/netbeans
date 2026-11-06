@@ -61,7 +61,7 @@ import org.openide.util.NbBundle.Messages;
 @ProjectServiceProvider(service=PrerequisitesChecker.class, projectType="org-netbeans-modules-maven/" + NbMavenProject.TYPE_JAR)
 public class RunJarPrereqChecker implements PrerequisitesChecker {
 
-    private static final String[] MAIN_CLASS_PROPERTIES = {"mainClass", "exec.mainClass", "project.mainClass", "project.mainclass"}; // NOI18N
+    private static final String[] MAIN_CLASS_PROPERTIES = {"mainClass", "exec.mainClass", "project.mainClass", "project.mainclass", "start-class"}; // NOI18N
 
     private String mainClass;
     
@@ -107,7 +107,7 @@ public class RunJarPrereqChecker implements PrerequisitesChecker {
                             mainClass = testedMainClass;
                             mc = mainClass;
                         } else if (!GraphicsEnvironment.isHeadless()) {
-                            mc = showMainClassDialog(config.getProject(), actionName);
+                            mc = showMainClassDialog(config.getProject(), actionName, isSpringBoot(config));
                             if (mc == null) {
                                 return false;
                             }
@@ -124,26 +124,57 @@ public class RunJarPrereqChecker implements PrerequisitesChecker {
         return true;
     }
 
+    static boolean isSpringBoot(RunConfig config) {
+        return config.getGoals().stream().anyMatch(goal -> goal.startsWith("spring-boot:")
+                || goal.startsWith("org.springframework.boot:spring-boot-maven-plugin:"))
+                || config.getMavenProject().getBuildPlugins().stream().anyMatch(plugin ->
+                        "org.springframework.boot".equals(plugin.getGroupId())
+                        && "spring-boot-maven-plugin".equals(plugin.getArtifactId()));
+    }
+
     private static String findMainClass(RunConfig config) {
+        // Boot goals need the application class, not a repackaged JAR's launcher.
+        if (config.getGoals().stream().anyMatch(goal -> goal.startsWith("spring-boot:")
+                || goal.startsWith("org.springframework.boot:spring-boot-maven-plugin:"))) {
+            String bootMain = getConfiguration(config, "spring-boot-maven-plugin", "mainClass"); // NOI18N
+            if (!isResolvedMainClass(bootMain)) {
+                bootMain = config.getMavenProject().getProperties().getProperty("start-class"); // NOI18N
+            }
+            if (isResolvedMainClass(bootMain)) {
+                return bootMain.trim();
+            }
+            // Let the existing source chooser resolve the application class.
+            return null;
+        }
         // Read main class from the manifest property:
         String mainClass = getConfiguration(config, "maven-jar-plugin", "archive", "manifest", "mainClass"); // NOI18N
-        if (mainClass != null) {
-            return mainClass;
+        if (isResolvedMainClass(mainClass)) {
+            return mainClass.trim();
         }
         // Read main class from exec-maven-plugin configuration:
         mainClass = getConfiguration(config, "exec-maven-plugin", "mainClass"); // NOI18N
-        if (mainClass != null) {
-            return mainClass;
+        if (isResolvedMainClass(mainClass)) {
+            return mainClass.trim();
+        }
+        // Spring Boot's parent may leave the JAR manifest's ${start-class}
+        // unresolved when the application relies on main-class discovery.
+        mainClass = getConfiguration(config, "spring-boot-maven-plugin", "mainClass"); // NOI18N
+        if (isResolvedMainClass(mainClass)) {
+            return mainClass.trim();
         }
         // Check pom's properties:
         Properties properties = config.getMavenProject().getProperties();
         for (String name : MAIN_CLASS_PROPERTIES) {
             String mc = properties.getProperty(name);
-            if (mc != null) {
-                return mc;
+            if (isResolvedMainClass(mc)) {
+                return mc.trim();
             }
         }
         return null;
+    }
+
+    private static boolean isResolvedMainClass(String value) {
+        return value != null && !value.trim().isEmpty() && !value.contains("${"); // NOI18N
     }
 
     private static Plugin findPlugin(RunConfig config, String name) {
@@ -180,7 +211,7 @@ public class RunJarPrereqChecker implements PrerequisitesChecker {
         "LBL_ChooseMainClass_Title=Select Main Class for Execution",
         "LBL_ChooseMainClass_OK=Select Main Class"
     })
-    private String showMainClassDialog(Project project, String actionName) {
+    private String showMainClassDialog(Project project, String actionName, boolean springBoot) {
         List<FileObject> roots = new ArrayList<FileObject>();
         Sources srcs = ProjectUtils.getSources(project);
         for (SourceGroup sourceGroup : srcs.getSourceGroups(JavaProjectConstants.SOURCES_TYPE_JAVA)) {
@@ -209,8 +240,41 @@ public class RunJarPrereqChecker implements PrerequisitesChecker {
         });
         panel.rbSession.setSelected(true);
         okButton.setEnabled(false);
+        java.awt.Component content = panel;
+        if (springBoot) {
+            javax.swing.JPanel wrapper = new javax.swing.JPanel(new java.awt.BorderLayout(8, 8));
+            wrapper.add(panel, java.awt.BorderLayout.CENTER);
+            javax.swing.JPanel education = new javax.swing.JPanel(new java.awt.BorderLayout(4, 4));
+            javax.swing.JToggleButton toggle = new javax.swing.JToggleButton(org.openide.util.NbBundle.getMessage(
+                    RunJarPrereqChecker.class, "BootExplain.title"));
+            javax.swing.JTextArea explanation = new javax.swing.JTextArea(org.openide.util.NbBundle.getMessage(
+                    RunJarPrereqChecker.class, "BootExplain.details"), 9, 60);
+            explanation.setEditable(false);
+            explanation.setLineWrap(true);
+            explanation.setWrapStyleWord(true);
+            javax.swing.JPanel details = new javax.swing.JPanel(new java.awt.BorderLayout(4, 4));
+            details.add(new javax.swing.JScrollPane(explanation), java.awt.BorderLayout.CENTER);
+            javax.swing.JButton docs = new javax.swing.JButton(org.openide.util.NbBundle.getMessage(
+                    RunJarPrereqChecker.class, "BootExplain.docs"));
+            docs.addActionListener(event -> {
+                try {
+                    org.openide.awt.HtmlBrowser.URLDisplayer.getDefault().showURL(new java.net.URL(
+                            "https://docs.spring.io/spring-boot/maven-plugin/run.html"));
+                } catch (java.net.MalformedURLException ex) { Exceptions.printStackTrace(ex); }
+            });
+            details.add(docs, java.awt.BorderLayout.SOUTH);
+            details.setVisible(false);
+            toggle.addActionListener(event -> {
+                details.setVisible(toggle.isSelected());
+                javax.swing.SwingUtilities.getWindowAncestor(wrapper).pack();
+            });
+            education.add(toggle, java.awt.BorderLayout.NORTH);
+            education.add(details, java.awt.BorderLayout.CENTER);
+            wrapper.add(education, java.awt.BorderLayout.SOUTH);
+            content = wrapper;
+        }
         DialogDescriptor desc = new DialogDescriptor(
-                panel,
+                content,
                 LBL_ChooseMainClass_Title(),
                 true,
                 options,

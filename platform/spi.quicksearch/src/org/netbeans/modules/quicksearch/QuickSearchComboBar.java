@@ -24,17 +24,15 @@ import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import javax.swing.BorderFactory;
 import javax.swing.ImageIcon;
+import javax.swing.Icon;
 import javax.swing.InputMap;
 import javax.swing.JComponent;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
 import javax.swing.Timer;
 import javax.swing.UIManager;
-import javax.swing.border.Border;
 import javax.swing.text.JTextComponent;
-import org.netbeans.api.annotations.common.StaticResource;
 import org.openide.util.ImageUtilities;
 
 /**
@@ -43,8 +41,6 @@ import org.openide.util.ImageUtilities;
  */
 public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
 
-    //@StaticResource(searchClasspath=true)
-    private static final String ICON_FIND = "org/openide/awt/resources/quicksearch/findMenu.png";             // NOI18N
     //@StaticResource(searchClasspath=true)
     private static final String ICON_PROGRESS_0 = "org/openide/awt/resources/quicksearch/progress_0.png"; // NOI18N
     //@StaticResource(searchClasspath=true)
@@ -66,7 +62,7 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
         ICON_PROGRESS_4, ICON_PROGRESS_5, ICON_PROGRESS_6, ICON_PROGRESS_7
     };
     
-    private final ImageIcon findIcon = ImageUtilities.loadImageIcon(ICON_FIND, false);
+    private final Icon findIcon = new SearchIcon();
     /** Timer used for progress animation (see #143019).  */
     private final Timer animationTimer = new Timer(100, new ActionListener() {
 
@@ -80,7 +76,7 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
                     icons[i] = ImageUtilities.loadImageIcon(ICON_PROGRESS[i], false);
                 }
             }
-            jLabel2.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 6));
+            jLabel2.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 9));
             jLabel2.setIcon(icons[index]);
             //mac os x
             jLabel2.repaint();
@@ -99,7 +95,21 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
     private void initComponents() {
         java.awt.GridBagConstraints gridBagConstraints;
 
-        jPanel1 = new javax.swing.JPanel();
+        jPanel1 = new javax.swing.JPanel() {
+            @Override
+            protected void paintComponent(java.awt.Graphics g) {
+                java.awt.Graphics2D copy = (java.awt.Graphics2D) g.create();
+                try {
+                    copy.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                            java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                    copy.setColor(command.getBackground());
+                    copy.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+                } finally {
+                    copy.dispose();
+                }
+            }
+        };
+        jPanel1.setOpaque(false);
         jLabel2 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         jSeparator1 = new javax.swing.JSeparator();
@@ -110,7 +120,17 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
         if (background != null) {
             jPanel1.setBackground(background);
         }
-        jPanel1.setBorder(getQuickSearchBorder());
+        jPanel1.setBorder(new SearchBorder());
+        command.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                jPanel1.repaint();
+            }
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                jPanel1.repaint();
+            }
+        });
         jPanel1.setName("jPanel1"); // NOI18N
         jPanel1.setLayout(new java.awt.GridBagLayout());
 
@@ -128,9 +148,11 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
         gridBagConstraints.gridx = 0;
         gridBagConstraints.gridy = 0;
         gridBagConstraints.weighty = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(1, 2, 1, 2);
+        gridBagConstraints.insets = new java.awt.Insets(0, 9, 0, 5);
         jPanel1.add(jLabel2, gridBagConstraints);
 
+        jScrollPane1.setOpaque(false);
+        jScrollPane1.getViewport().setOpaque(false);
         jScrollPane1.setBorder(null);
         jScrollPane1.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         jScrollPane1.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER);
@@ -146,7 +168,7 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
         gridBagConstraints.fill = java.awt.GridBagConstraints.HORIZONTAL;
         gridBagConstraints.weightx = 1.0;
         gridBagConstraints.weighty = 1.0;
-        gridBagConstraints.insets = new java.awt.Insets(0, 0, 0, 2);
+        gridBagConstraints.insets = new java.awt.Insets(4, 0, 4, 9);
         jPanel1.add(jScrollPane1, gridBagConstraints);
 
         gridBagConstraints = new java.awt.GridBagConstraints();
@@ -156,17 +178,60 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
         add(jPanel1, gridBagConstraints);
     }
 
-    /**
-     * Get customizable border for QuickSearch. See bug 246907.
-     *
-     * @return Custom border if defined in {@link UIManager} or default line
-     * border.
-     */
-    private Border getQuickSearchBorder() {
-        Border border = UIManager.getBorder("nb.quicksearch.border"); //NOI18N
-        return border != null
-                ? border
-                : BorderFactory.createLineBorder(getComboBorderColor());
+    private final class SearchBorder extends javax.swing.border.AbstractBorder {
+        @Override
+        public java.awt.Insets getBorderInsets(java.awt.Component c, java.awt.Insets insets) {
+            insets.set(1, 1, 1, 1);
+            return insets;
+        }
+
+        @Override
+        public void paintBorder(java.awt.Component c, java.awt.Graphics g,
+                int x, int y, int width, int height) {
+            java.awt.Graphics2D copy = (java.awt.Graphics2D) g.create();
+            try {
+                copy.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                Color color = UIManager.getColor(command.isFocusOwner()
+                        ? "Component.focusColor" : "Component.borderColor"); // NOI18N
+                copy.setColor(color != null ? color : getComboBorderColor());
+                copy.drawRoundRect(x, y, width - 1, height - 1, 12, 12);
+            } finally {
+                copy.dispose();
+            }
+        }
+    }
+
+    private static final class SearchIcon implements Icon {
+        @Override
+        public int getIconWidth() {
+            return 24;
+        }
+
+        @Override
+        public int getIconHeight() {
+            return 18;
+        }
+
+        @Override
+        public void paintIcon(java.awt.Component c, java.awt.Graphics g, int x, int y) {
+            java.awt.Graphics2D copy = (java.awt.Graphics2D) g.create();
+            try {
+                copy.translate(x, y);
+                copy.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                Color color = UIManager.getColor("TextField.inactiveForeground"); // NOI18N
+                copy.setColor(color != null ? color : c.getForeground());
+                copy.setStroke(new java.awt.BasicStroke(1.5f,
+                        java.awt.BasicStroke.CAP_ROUND, java.awt.BasicStroke.JOIN_ROUND));
+                copy.drawOval(1, 2, 10, 10);
+                copy.drawLine(10, 11, 15, 16);
+                copy.drawLine(19, 7, 21, 9);
+                copy.drawLine(21, 9, 23, 7);
+            } finally {
+                copy.dispose();
+            }
+        }
     }
 
     private void jLabel2MousePressed(java.awt.event.MouseEvent evt) {
@@ -182,7 +247,8 @@ public class QuickSearchComboBar extends AbstractQuickSearchComboBar {
     protected JTextComponent createCommandField() {
         JTextArea res = new DynamicWidthTA();
         res.setRows(1);
-        res.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 4, 1, 1));
+        res.setOpaque(false);
+        res.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 2, 2, 2));
         // disable default Swing's Ctrl+Shift+O binding to enable our global action
         InputMap curIm = res.getInputMap(JComponent.WHEN_FOCUSED);
         while (curIm != null) {

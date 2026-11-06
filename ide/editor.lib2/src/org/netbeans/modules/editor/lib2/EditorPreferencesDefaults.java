@@ -55,7 +55,7 @@ public final class EditorPreferencesDefaults {
     // --- from SettingsDefaults
     // -----------------------------------------------------------------------
     
-    public static final int defaultCaretBlinkRate = 300;
+    public static final int defaultCaretBlinkRate = 700;
     public static final int defaultTabSize = 8;
     public static final int defaultSpacesPerTab = 4;
     public static final int defaultShiftWidth = 4; // usually
@@ -68,7 +68,7 @@ public final class EditorPreferencesDefaults {
     public static final Acceptor defaultIdentifierAcceptor = AcceptorFactory.LETTER_DIGIT;
     public static final Acceptor defaultWhitespaceAcceptor = AcceptorFactory.WHITESPACE;
 
-    public static final float defaultLineHeightCorrection = 1.0f;
+    public static final float defaultLineHeightCorrection = 1.15f;
 
     public static final int defaultTextLeftMarginWidth = 2;
     public static final Insets defaultMargin = new Insets(0, 0, 0, 0);

@@ -89,6 +89,7 @@ public class DBCompletionContextResolver implements CompletionContextResolver {
     };
     
     private static final String PERSISTENCE_PKG = "javax.persistence";
+    private static final String JAKARTA_PERSISTENCE_PKG = "jakarta.persistence";
     
     @Override
     public List resolve(JPACodeCompletionProvider.Context ctx) {
@@ -187,7 +188,7 @@ public class DBCompletionContextResolver implements CompletionContextResolver {
     
     /** @return index of the annotation type qhich is going to be queried or -1 if no such annotation found. */
     private int getAnnotationIndex(String annotationName) {
-        if(annotationName.startsWith(PERSISTENCE_PKG)) {
+        if(annotationName.startsWith(PERSISTENCE_PKG) || annotationName.startsWith(JAKARTA_PERSISTENCE_PKG)) {
             //cut off the package
             annotationName = annotationName.substring(annotationName.lastIndexOf('.') + 1);
         }
@@ -206,6 +207,10 @@ public class DBCompletionContextResolver implements CompletionContextResolver {
     private DatabaseConnection findDatabaseConnection(JPACodeCompletionProvider.Context ctx) {
         PersistenceUnit[] pus = ctx.getPersistenceUnits();
         if(pus == null || pus.length == 0) {
+            DatabaseConnection preferred = ConnectionManager.getDefault().getPreferredConnection(true);
+            if (preferred != null) {
+                return preferred;
+            }
             ErrorManager.getDefault().log(ErrorManager.INFORMATIONAL, "There isn't any defined persistence unit for this class in the project!");
             return null;
         }
@@ -676,7 +681,10 @@ public class DBCompletionContextResolver implements CompletionContextResolver {
                     List<VariableElement> resultFields = new LinkedList<>();
                     TypeElement typeElement = cdef;
                     while (typeElement != null) {
-                        if (org.netbeans.modules.j2ee.persistence.wizard.jpacontroller.JpaControllerUtil.isAnnotatedWith(cdef, "javax.persistence.Entity") || org.netbeans.modules.j2ee.persistence.wizard.jpacontroller.JpaControllerUtil.isAnnotatedWith(cdef, "javax.persistence.MappedSuperclass")) { // NOI18N
+                        if (org.netbeans.modules.j2ee.persistence.wizard.jpacontroller.JpaControllerUtil.isAnnotatedWith(cdef, "javax.persistence.Entity")
+                                || org.netbeans.modules.j2ee.persistence.wizard.jpacontroller.JpaControllerUtil.isAnnotatedWith(cdef, "jakarta.persistence.Entity")
+                                || org.netbeans.modules.j2ee.persistence.wizard.jpacontroller.JpaControllerUtil.isAnnotatedWith(cdef, "javax.persistence.MappedSuperclass")
+                                || org.netbeans.modules.j2ee.persistence.wizard.jpacontroller.JpaControllerUtil.isAnnotatedWith(cdef, "jakarta.persistence.MappedSuperclass")) { // NOI18N
                             resultMethods.addAll(ElementFilter.methodsIn(typeElement.getEnclosedElements()));
                             resultFields.addAll(ElementFilter.fieldsIn(typeElement.getEnclosedElements()));
                         }
@@ -689,7 +697,7 @@ public class DBCompletionContextResolver implements CompletionContextResolver {
                                 continue element;
                             }
                         }
-                        if(JpaControllerUtil.isAnnotatedWith(f,"javax.persistence.Transient")) { //NOI18N
+                        if(JpaControllerUtil.isAnnotatedWith(f,"javax.persistence.Transient") || JpaControllerUtil.isAnnotatedWith(f,"jakarta.persistence.Transient")) { //NOI18N
                             continue;
                         }
                         String name = f.getSimpleName().toString();
@@ -729,17 +737,17 @@ public class DBCompletionContextResolver implements CompletionContextResolver {
             TypeElement annTypeElement = (TypeElement) annotation.getAnnotationType().asElement();
             String annotationTypeName = annTypeElement.getQualifiedName().toString();
             
-            if ("javax.persistence.Table".equals(annotationTypeName)) { // NOI18N
+            if ("javax.persistence.Table".equals(annotationTypeName) || "jakarta.persistence.Table".equals(annotationTypeName)) { // NOI18N
                 String tableName = AnnotationUtils.getStringMemberValue(annotation, "name"); // NOI18N
                 if (tableName != null) {
                     result.add(tableName);
                 }
-            } else if ("javax.persistence.SecondaryTable".equals(annotationTypeName)) { // NOI18N
+            } else if ("javax.persistence.SecondaryTable".equals(annotationTypeName) || "jakarta.persistence.SecondaryTable".equals(annotationTypeName)) { // NOI18N
                 String tableName = AnnotationUtils.getStringMemberValue(annotation, "name"); // NOI18N
                 if (tableName != null) {
                     result.add(tableName);
                 }
-            } else if ("javax.persistence.SecondaryTables".equals(annotationTypeName)) { // NOI18N
+            } else if ("javax.persistence.SecondaryTables".equals(annotationTypeName) || "jakarta.persistence.SecondaryTables".equals(annotationTypeName)) { // NOI18N
                 List<AnnotationMirror> secondaryTableNNs = AnnotationUtils.getAnnotationsMemberValue(annotation, "value"); // NOI18N
                 for (Iterator<AnnotationMirror> j = secondaryTableNNs.iterator(); j.hasNext();) {
                     AnnotationMirror secondaryTableNN = (AnnotationMirror)j.next();

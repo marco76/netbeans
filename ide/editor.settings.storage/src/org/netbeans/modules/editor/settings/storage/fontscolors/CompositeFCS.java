@@ -26,11 +26,15 @@ import java.awt.Toolkit;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.prefs.Preferences;
@@ -392,7 +396,43 @@ public final class CompositeFCS extends FontColorSettings {
     }
 
     private static AttributeSet hardCodedDefaultColoring = null;
-    private static final int DEFAULT_FONTSIZE = 13;
+    private static final int DEFAULT_FONTSIZE = Integer.getInteger("org.netbeans.editor.default.font.size", 14); //NOI18N
+    private static final String[] PREFERRED_EDITOR_FONTS = {
+        "JetBrains Mono", //NOI18N
+        "SF Mono", //NOI18N
+        "SF NS Mono", //NOI18N
+        "Cascadia Mono", //NOI18N
+        "Cascadia Code", //NOI18N
+        "Fira Code", //NOI18N
+        "Menlo", //NOI18N
+        "Consolas", //NOI18N
+        "DejaVu Sans Mono", //NOI18N
+        "Liberation Mono", //NOI18N
+        "Ubuntu Mono" //NOI18N
+    };
+
+    private static String getDefaultFontFamily() {
+        String customFamily = System.getProperty("org.netbeans.editor.default.font.family"); //NOI18N
+        if (customFamily != null && !customFamily.trim().isEmpty()) {
+            return customFamily.trim();
+        }
+        if (!GraphicsEnvironment.isHeadless()) {
+            try {
+                String[] available = GraphicsEnvironment.getLocalGraphicsEnvironment()
+                        .getAvailableFontFamilyNames(Locale.ROOT);
+                Set<String> availableSet = new HashSet<>(Arrays.asList(available));
+                for (String preferred : PREFERRED_EDITOR_FONTS) {
+                    if (availableSet.contains(preferred)) {
+                        return preferred;
+                    }
+                }
+            } catch (Throwable t) {
+                LOG.log(Level.FINE, "Could not query available font families, falling back to Monospaced", t); //NOI18N
+            }
+        }
+        return "Monospaced"; //NOI18N
+    }
+
     private static AttributeSet getHardcodedDefaultColoring() {
         if (hardCodedDefaultColoring == null) {
             int defaultFontSize;
@@ -407,7 +447,7 @@ public final class CompositeFCS extends FontColorSettings {
                     StyleConstants.NameAttribute, FontColorNames.DEFAULT_COLORING,
                     StyleConstants.Foreground, Color.black,
                     StyleConstants.Background, Color.white,
-                    StyleConstants.FontFamily, "Monospaced", //NOI18N
+                    StyleConstants.FontFamily, getDefaultFontFamily(),
                     StyleConstants.FontSize, Math.max(defaultFontSize, DEFAULT_FONTSIZE));
         }
         assert hardCodedDefaultColoring != null;

@@ -603,8 +603,50 @@ import org.openide.util.lookup.ProxyLookup;
         for (JComponent jc : processHiding) {
             hideShowPresenter(jc);
         }
+        compactActions();
     }
     
+    /** Keep occasional editing tools accessible without a permanent row of icons. */
+    private void compactActions() {
+        javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
+        for (Component component : getComponents()) {
+            if (!(component instanceof AbstractButton)) continue;
+            AbstractButton button = (AbstractButton) component;
+            Action action = button.getAction();
+            String name = action == null ? "" : String.valueOf(action.getValue(Action.NAME));
+            if (java.util.Arrays.asList("start-macro-recording", "stop-macro-recording",
+                    "shift-line-left", "shift-line-right").contains(name)) {
+                javax.swing.JMenuItem entry = new javax.swing.JMenuItem(action);
+                String tooltip = button.getToolTipText();
+                if (tooltip != null) entry.setText(tooltip.replaceAll("<[^>]*>", ""));
+                menu.add(entry);
+                remove(component);
+            }
+        }
+        // Removing actions must not leave empty groups or trailing separators.
+        boolean separator = true;
+        for (Component component : getComponents()) {
+            if (component instanceof JSeparator) {
+                if (separator) remove(component);
+                separator = true;
+            } else {
+                separator = false;
+            }
+        }
+        if (getComponentCount() > 0 && getComponent(getComponentCount() - 1) instanceof JSeparator) {
+            remove(getComponentCount() - 1);
+        }
+        if (menu.getComponentCount() > 0) {
+            JButton more = new JButton("\u22ef");
+            more.setToolTipText(org.openide.util.NbBundle.getMessage(NbEditorToolBar.class, "LBL_MoreEditorActions"));
+            more.getAccessibleContext().setAccessibleName(more.getToolTipText());
+            more.setFocusable(true);
+            more.setMargin(new java.awt.Insets(2, 8, 2, 8));
+            more.addActionListener(event -> menu.show(more, 0, more.getHeight()));
+            add(more);
+        }
+    }
+
     // XXX: this is actually wierd, because it changes the action's properties
     // perhaps we should just update the presenter, but should not touch the
     // action itself
@@ -683,12 +725,50 @@ import org.openide.util.lookup.ProxyLookup;
 
     private void processButton(AbstractButton button) {
         removeButtonContentAreaAndBorder(button);
+        Action action = button.getAction();
+        String name = action == null ? "" : String.valueOf(action.getValue(Action.NAME));
+        if (name.equals("jump-list-prev") || name.equals("jump-list-next") || name.equals("jump-list-last-edit")) {
+            button.setIcon(new NavigationIcon(name.equals("jump-list-next"), name.equals("jump-list-last-edit")));
+            button.setDisabledIcon(new NavigationIcon(name.equals("jump-list-next"), name.equals("jump-list-last-edit")));
+        }
         button.setMargin(BUTTON_INSETS);
         if (button instanceof AbstractButton) {
             button.addMouseListener(sharedMouseListener);
         }
         //fix of issue #69642. Focus shouldn't stay in toolbar
         button.setFocusable(false);
+    }
+
+    /** Theme-aware vector icons stay sharp on scaled displays. */
+    private static final class NavigationIcon implements javax.swing.Icon {
+        private final boolean forward;
+        private final boolean edit;
+        NavigationIcon(boolean forward, boolean edit) {
+            this.forward = forward;
+            this.edit = edit;
+        }
+        @Override public int getIconWidth() { return 16; }
+        @Override public int getIconHeight() { return 16; }
+        @Override public void paintIcon(Component component, java.awt.Graphics graphics, int x, int y) {
+            java.awt.Graphics2D g = (java.awt.Graphics2D) graphics.create();
+            try {
+                g.translate(x, y);
+                g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING,
+                        java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+                java.awt.Color color = component.isEnabled() ? component.getForeground()
+                        : UIManager.getColor("Label.disabledForeground");
+                g.setColor(color != null ? color : java.awt.Color.GRAY);
+                g.setStroke(new java.awt.BasicStroke(1.5f, java.awt.BasicStroke.CAP_ROUND,
+                        java.awt.BasicStroke.JOIN_ROUND));
+                if (forward) { g.translate(16, 0); g.scale(-1, 1); }
+                g.drawLine(3, 8, 13, 8);
+                g.drawLine(3, 8, 7, 4);
+                g.drawLine(3, 8, 7, 12);
+                if (edit) g.fillOval(11, 2, 3, 3);
+            } finally {
+                g.dispose();
+            }
+        }
     }
 
     private static void removeButtonContentAreaAndBorder(AbstractButton button) {

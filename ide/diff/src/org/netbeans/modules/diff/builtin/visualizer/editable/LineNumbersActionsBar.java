@@ -354,7 +354,13 @@ class LineNumbersActionsBar extends JPanel implements Scrollable, MouseMotionLis
         for (DiffViewManager.DecoratedDifference dd : diffs) {
             int bottom = master.isFirst() ? dd.getBottomLeft() : dd.getBottomRight();
             int top = master.isFirst() ? dd.getTopLeft() : dd.getTopRight();
-            g.setColor(master.getMaster().getColorLines());
+            boolean selected = currentDifference == idx;
+            g.setColor(selected ? master.getMaster().getSelectedChangeColor()
+                    : master.getMaster().getColorLines());
+            if (selected) {
+                int markerX = master.isFirst() ? getBarWidth() - 3 : 0;
+                g.fillRect(markerX, top, 3, Math.max(3, bottom == -1 ? 3 : bottom - top));
+            }
             g.setStroke(currentDifference == idx ? master.getMaster().getBoldStroke() : cs);
             g.drawLine(0, top, getBarWidth(), top);
             if (bottom != -1) {

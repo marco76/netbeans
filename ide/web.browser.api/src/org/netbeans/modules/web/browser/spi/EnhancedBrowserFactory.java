@@ -69,4 +69,9 @@ public interface EnhancedBrowserFactory {
      * to using "hidden" attribute in registrations via module layer.
      */
     boolean canCreateHtmlBrowserImpl();
+    /** Whether a mobile target is connected. Called off the event dispatch thread. */
+    default boolean isTargetAvailable() {
+        return !getBrowserFamilyId().isMobile();
+    }
+
 }

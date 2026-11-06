@@ -59,7 +59,6 @@ import org.netbeans.modules.web.browser.spi.ProjectBrowserProvider;
 import org.netbeans.spi.project.ActionProvider;
 import org.openide.awt.ActionID;
 import org.openide.awt.ActionReference;
-import org.openide.awt.ActionReferences;
 import org.openide.awt.ActionRegistration;
 import org.openide.awt.DropDownButtonFactory;
 import org.openide.awt.ToolbarPool;
@@ -81,10 +80,7 @@ import org.openide.windows.TopComponent;
 
 @ActionID(id="org.netbeans.modules.web.clientproject.browser.ActiveBrowserAction", category="Project")
 @ActionRegistration(displayName="#ActiveBrowserAction.reg.name", lazy=false)
-@ActionReferences({
-    @ActionReference(path="Menu/BuildProject", position=307),
-    @ActionReference(path="Toolbars/Build", position=87)
-})
+@ActionReference(path="Menu/BuildProject", position=307)
 public class ActiveBrowserAction extends CallableSystemAction implements LookupListener {
 
     private final Lookup lookup;
@@ -268,6 +264,8 @@ public class ActiveBrowserAction extends CallableSystemAction implements LookupL
     @Override
     public Component getToolbarPresenter() {
         final JButton button = new JButton();
+        // Existing user toolbar layouts can retain the removed action reference.
+        button.setVisible(false);
         button.setAction(new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -369,6 +367,7 @@ public class ActiveBrowserAction extends CallableSystemAction implements LookupL
                 tb.setIcon(badgeWithArrowIcon(im));
                 lastWebBrowser = wb;
             }
+            tb.setVisible(false);
             tb.setEnabled(pbp != null);
         }
         JMenu ma = menuAction;

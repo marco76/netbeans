@@ -85,6 +85,31 @@ public class CompletionProviderImplTest extends NbTestCase {
         super(name);
     }
 
+    public void testTypeScriptIdentifierTriggers() {
+        String mime = "application/x-typescript";
+        for (String typed : List.of("H", "c", "HttpCl", "_", "$", "1", "é")) {
+            assertTrue(typed, CompletionProviderImpl.isIdentifierTrigger(mime, typed));
+        }
+        for (String typed : List.of("", " ", "\n", "{", "}", "(", ")", ";", ".")) {
+            assertFalse(typed, CompletionProviderImpl.isIdentifierTrigger(mime, typed));
+        }
+        assertFalse(CompletionProviderImpl.isIdentifierTrigger("text/html", "a"));
+        assertFalse(CompletionProviderImpl.isIdentifierTrigger("text/x-java", "a"));
+    }
+
+    public void testTypeScriptBlockDoesNotOpenKeywordCompletion() {
+        String mime = "application/x-typescript";
+        for (String typed : List.of("{", "}", " ", "\n", "\t", "() {")) {
+            assertFalse(typed, CompletionProviderImpl.allowsAutomaticCompletion(mime, typed));
+        }
+        for (String typed : List.of(".", "@", "'", "\"", "/", "a")) {
+            assertTrue(typed, CompletionProviderImpl.allowsAutomaticCompletion(mime, typed));
+        }
+        assertFalse(CompletionProviderImpl.allowsAutomaticCompletion(mime, ""));
+        assertTrue(CompletionProviderImpl.allowsAutomaticCompletion("text/html", "{"));
+        assertTrue(CompletionProviderImpl.allowsAutomaticCompletion("text/x-java", " "));
+    }
+
     public void testConvertSnippet2CodeTemplate() {
         doRunConvertSnippetTest("println(${1:args});$0",
                   "println(${T1 default=\"args\"});${cursor}");
@@ -101,6 +126,20 @@ public class CompletionProviderImplTest extends NbTestCase {
     private void doRunConvertSnippetTest(String snippet, String template) {
         String converted = CompletionProviderImpl.convertSnippet2CodeTemplate(snippet);
         assertEquals(template, converted);
+    }
+
+    public void testResolveImportEditsWhenMainEditAlreadyPresent() throws IOException {
+        runCompletionDefaultActionTest("foo.ins|", new TestTextDocumentService() {
+            @Override public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
+                CompletionItem item = new CompletionItem("inserted");
+                item.setTextEdit(Either.forLeft(new TextEdit(new Range(new Position(0, 4), new Position(0, 7)), "inserted")));
+                return CompletableFuture.completedFuture(Either.forLeft(List.of(item)));
+            }
+            @Override public CompletableFuture<CompletionItem> resolveCompletionItem(CompletionItem item) {
+                item.setAdditionalTextEdits(List.of(new TextEdit(new Range(new Position(0, 0), new Position(0, 0)), "imported; ")));
+                return CompletableFuture.completedFuture(item);
+            }
+        }, "imported; foo.inserted");
     }
 
     public void testCommitWithResolveInsertPlainTextAndAdditionalEdits() throws IOException {

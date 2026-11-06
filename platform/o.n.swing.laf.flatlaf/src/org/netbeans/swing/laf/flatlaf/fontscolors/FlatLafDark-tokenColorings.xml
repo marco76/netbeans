@@ -25,20 +25,20 @@
     <fontcolor name="comment" foreColor="gray"/>
     <fontcolor name="default" foreColor="ffa9b7c6" bgColor="ff2b2b2b"/>
     <fontcolor name="entity-reference" default="default"/>
-    <fontcolor name="error" waveUnderlined="ff9e2927"/>
+    <fontcolor name="error" waveUnderlined="E17983"/>
     <fontcolor name="field" default="identifier" foreColor="ff9876aa"/>
     <fontcolor name="identifier" foreColor="ffa9b7c6"/>
     <fontcolor name="keyword" foreColor="ffcc7832"/>
     <fontcolor name="mark-occurrences" bgColor="ff364135"/>
-    <fontcolor name="markup-attribute" default="field" foreColor="ffbababa"/>
-    <fontcolor name="markup-attribute-value" default="string" foreColor="ffa5c261"/>
-    <fontcolor name="markup-element" default="keyword" foreColor="ffe8bf6a"/>
+    <fontcolor name="markup-attribute" foreColor="B7A0D6"/>
+    <fontcolor name="markup-attribute-value" foreColor="9BC493"/>
+    <fontcolor name="markup-element" foreColor="86ACD6"/>
     <fontcolor name="method" default="identifier"/>
     <fontcolor name="number" foreColor="ff6897bb"/>
     <fontcolor name="operator" foreColor="ffa9b7c6"/>
     <fontcolor name="separator" foreColor="ffa9b7c6"/>
     <fontcolor name="string" foreColor="ff6a8759"/>
-    <fontcolor name="url" foreColor="ff287bde" underline="ff287bde"/>
-    <fontcolor name="warning" bgColor="ff52503a" waveUnderlined="ff52503a"/>
+    <fontcolor name="url"/>
+    <fontcolor name="warning" waveUnderlined="D6AC62"/>
     <fontcolor name="whitespace" foreColor="ff505050"/>
 </fontscolors>

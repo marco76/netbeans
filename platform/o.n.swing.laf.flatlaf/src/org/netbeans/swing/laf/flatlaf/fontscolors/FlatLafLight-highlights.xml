@@ -24,30 +24,30 @@
     <fontcolor name="block-search" foreColor="black" bgColor="E0E8F1"/>
     <fontcolor name="caret-color-insert-mode" foreColor="black"/>
     <fontcolor name="caret-color-overwrite-mode" foreColor="black"/>
-    <fontcolor name="code-folding-bar" foreColor="8C8C8C"/>
-    <fontcolor name="code-folding-border" foreColor="8C8C8C"/>
-    <fontcolor name="code-folding" foreColor="8C8C8C"/>
+    <fontcolor name="code-folding-bar" foreColor="BBC3CD"/>
+    <fontcolor name="code-folding-border" foreColor="DCE1E7"/>
+    <fontcolor name="code-folding" foreColor="929DAA"/>
     <fontcolor name="guarded" bgColor="DFDFDF"/>
-    <fontcolor name="highlight-caret-row" bgColor="F9F4E0"/>
-    <fontcolor name="highlight-search" foreColor="black" bgColor="FFB442"/>
+    <fontcolor name="highlight-caret-row" bgColor="F3F6FA"/>
+    <fontcolor name="highlight-search" foreColor="black" bgColor="FFE3A3"/>
     <fontcolor name="hyperlinks" foreColor="185ADD" underline="185ADD"/>
-    <fontcolor name="inc-search" foreColor="black" bgColor="FFB442"/>
-    <fontcolor name="indent-guide-lines" foreColor="D3D3D3"/>
+    <fontcolor name="inc-search" foreColor="black" bgColor="FFE3A3"/>
+    <fontcolor name="indent-guide-lines" foreColor="EBEBEB"/>
     <fontcolor name="indent-whitespace" foreColor="lightGray"/>
-    <fontcolor name="line-number" foreColor="darkGray" bgColor="E9E8E2"/>
-    <fontcolor name="nbeditor-bracesMatching-match-multichar" bgColor="CCFFCC"/>
-    <fontcolor name="nbeditor-bracesMatching-match" bgColor="CCFFCC"/>
-    <fontcolor name="nbeditor-bracesMatching-mismatch-multichar" bgColor="D83636"/>
-    <fontcolor name="nbeditor-bracesMatching-mismatch" bgColor="D83636"/>
+    <fontcolor name="line-number" foreColor="7B8491" bgColor="white"/>
+    <fontcolor name="nbeditor-bracesMatching-match-multichar" bgColor="E8EFF8"/>
+    <fontcolor name="nbeditor-bracesMatching-match" bgColor="E8EFF8"/>
+    <fontcolor name="nbeditor-bracesMatching-mismatch-multichar" foreColor="A8323E" bgColor="FBEAEC" underline="C4515C"/>
+    <fontcolor name="nbeditor-bracesMatching-mismatch" foreColor="A8323E" bgColor="FBEAEC" underline="C4515C"/>
     <fontcolor name="nbeditor-bracesMatching-sidebar" foreColor="6B8EB2"/>
     <fontcolor name="readonly-files" bgColor="DFDFDF"/>
-    <fontcolor name="selection" bgColor="89BCED"/>
+    <fontcolor name="selection" bgColor="D5E4FA"/>
     <fontcolor name="status-bar-bold" foreColor="DD2A2A"/>
     <fontcolor name="status-bar"/>
     <fontcolor name="synchronized-text-blocks-ext-slave" foreColor="996600"/>
     <fontcolor name="synchronized-text-blocks-ext" foreColor="CC0099"/>
     <fontcolor name="synchronized-text-blocks" bgColor="8AC0EC"/>
-    <fontcolor name="text-limit-line-color" foreColor="D2ACCB"/>
+    <fontcolor name="text-limit-line-color" foreColor="E2E5E9"/>
     <fontcolor name="trailing-whitespace" foreColor="lightGray"/>
     <fontcolor name="west-sidebars-color"/>
     <!-- <fontcolor name="coverage-covered" bgColor="005000"/>

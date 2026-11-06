@@ -20,6 +20,11 @@ package org.netbeans.lib.terminalemulator.support;
 
 import java.awt.Font;
 import java.awt.Color;
+import java.awt.GraphicsEnvironment;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import java.util.prefs.Preferences;
 import javax.swing.UIManager;
 
@@ -82,8 +87,8 @@ public final class TermOptions {
 
     public final void resetToDefault() {
         Font controlFont = UIManager.getFont("controlFont"); //NOI18N
-        fontSizeDefault = (controlFont == null) ? 12 : controlFont.getSize();
-        fontDefault = new Font("monospaced", Font.PLAIN, fontSizeDefault); //NOI18N
+        fontSizeDefault = (controlFont == null) ? 14 : Math.max(14, controlFont.getSize());
+        fontDefault = new Font(getDefaultFontFamily(), Font.PLAIN, fontSizeDefault);
         foregroundDefault = getDefaultColorStandard();
         backgroundDefault = getDefaultColorBackground();
         selectionBackgroundDefault = getDefaultSelectionBackground();
@@ -114,15 +119,28 @@ public final class TermOptions {
         markDirty();
     }
 
-    private static Color getDefaultColorStandard() {
-        Color out = UIManager.getColor("nb.output.foreground"); //NOI18N
-        if (out == null) {
-            out = UIManager.getColor("TextField.foreground"); //NOI18N
-            if (out == null) {
-                out = Color.BLACK;
+    private static String getDefaultFontFamily() {
+        String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT); //NOI18N
+        String[] candidates;
+        if (os.startsWith("mac")) { //NOI18N
+            candidates = new String[]{"Menlo", "Monaco"}; //NOI18N
+        } else if (os.startsWith("windows")) { //NOI18N
+            candidates = new String[]{"Cascadia Mono", "Consolas"}; //NOI18N
+        } else {
+            candidates = new String[]{"JetBrains Mono", "DejaVu Sans Mono", "Liberation Mono"}; //NOI18N
+        }
+        Set<String> installed = new HashSet<>(Arrays.asList(GraphicsEnvironment
+                .getLocalGraphicsEnvironment().getAvailableFontFamilyNames(Locale.ROOT)));
+        for (String candidate : candidates) {
+            if (installed.contains(candidate)) {
+                return candidate;
             }
         }
-        return out;
+        return Font.MONOSPACED;
+    }
+
+    private static Color getDefaultColorStandard() {
+        return isDark(getDefaultColorBackground()) ? new Color(216, 222, 233) : new Color(75, 85, 99);
     }
 
     private static Color getDefaultColorBackground() {
@@ -140,17 +158,16 @@ public final class TermOptions {
                 back = new Color(back.getRGB()); // #225829
             }
         }
-        return back;
+        return isDark(back) ? new Color(30, 34, 42) : new Color(250, 251, 253);
     }
 
     private static Color getDefaultSelectionBackground() {
-	Color color = UIManager.getColor("TextArea.selectionBackground");// NOI18N
-	if (color == null) {
-	    // bug #185154
-	    // Nimbus L&F doesn't define "TextArea.selectionBackground"
-	    color = UIManager.getColor("textHighlight");// NOI18N
-	}
-        return color;
+        Color background = getDefaultColorBackground();
+        return isDark(background) ? new Color(55, 75, 102) : new Color(210, 228, 248);
+    }
+
+    private static boolean isDark(Color color) {
+        return color.getRed() * 299 + color.getGreen() * 587 + color.getBlue() * 114 < 128000;
     }
 
     public static synchronized TermOptions getDefault(Preferences prefs) {

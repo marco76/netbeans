@@ -34,8 +34,8 @@
     <fontcolor name="keyword-directive" default="keyword"/>
     <fontcolor name="literal" default="keyword"/>
     <fontcolor name="mod-abstract"/>
-    <fontcolor name="mod-annotation-type" default="identifier"/>
-    <fontcolor name="mod-annotation-type-declaration" default="identifier"><font style="bold"/></fontcolor>
+    <fontcolor name="mod-annotation-type" default="identifier" foreColor="ffbbb529"/>
+    <fontcolor name="mod-annotation-type-declaration" default="identifier" foreColor="ffbbb529"><font style="bold"/></fontcolor>
     <fontcolor name="mod-class" default="identifier"/>
     <fontcolor name="mod-class-declaration" default="identifier"><font style="bold"/></fontcolor>
     <fontcolor name="mod-constructor" default="identifier"/>
@@ -43,14 +43,14 @@
     <fontcolor name="mod-deprecated" strikeThrough="ffc3c3c3"/>
     <fontcolor name="mod-enum" default="identifier"/>
     <fontcolor name="mod-enum-declaration" default="identifier"><font style="bold"/></fontcolor>
-    <fontcolor name="mod-field" default="field"/>
-    <fontcolor name="mod-field-declaration" default="field"/>
+    <fontcolor name="mod-field" default="field" foreColor="ffc3a6df"/>
+    <fontcolor name="mod-field-declaration" default="field" foreColor="ffc3a6df"/>
     <fontcolor name="mod-interface" default="identifier"/>
     <fontcolor name="mod-interface-declaration" default="identifier"><font style="bold"/></fontcolor>
     <fontcolor name="mod-local-variable" default="identifier"/>
     <fontcolor name="mod-local-variable-declaration" default="identifier"/>
     <fontcolor name="mod-method" default="method"/>
-    <fontcolor name="mod-method-declaration" default="method" foreColor="ffffc66d"/>
+    <fontcolor name="mod-method-declaration" default="method" foreColor="ff82aaff"/>
     <fontcolor name="mod-package-private"/>
     <fontcolor name="mod-parameter" default="identifier"/>
     <fontcolor name="mod-parameter-declaration" default="identifier"/>
@@ -58,13 +58,15 @@
     <fontcolor name="mod-protected"/>
     <fontcolor name="mod-public"/>
     <fontcolor name="mod-record-declaration" default="identifier"><font style="bold"/></fontcolor>
-    <fontcolor name="mod-static"><font style="italic"/></fontcolor>
+    <fontcolor name="mod-static"><font style="plain"/></fontcolor>
     <fontcolor name="mod-unused" foreColor="gray" waveUnderlined="gray"/>
     <fontcolor name="number" default="number"/>
-    <fontcolor name="operator" default="operator"/>
-    <fontcolor name="separator" default="separator"/>
+    <fontcolor name="operator" default="operator" foreColor="ffa9b1bc"/>
+    <fontcolor name="separator" default="separator" foreColor="ffa9b1bc"/>
     <fontcolor name="string" default="string"/>
     <fontcolor name="string-escape" default="string" foreColor="ffcc7832"/>
     <fontcolor name="string-escape-invalid" default="string" waveUnderlined="red"/>
     <fontcolor name="whitespace" default="whitespace"/>
+    <fontcolor name="mod-record-component" default="field" foreColor="ffc3a6df"/>
+    <fontcolor name="mod-record-component-declaration" default="field" foreColor="ffc3a6df"/>
 </fontscolors>

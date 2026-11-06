@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,7 +43,6 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javax.swing.event.ChangeListener;
 import org.eclipse.lsp4j.debug.Capabilities;
-import org.eclipse.lsp4j.debug.ConfigurationDoneArguments;
 import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.ContinuedEventArguments;
 import org.eclipse.lsp4j.debug.DisconnectArguments;
@@ -107,6 +107,7 @@ public final class DAPDebugger implements IDebugProtocolClient {
 
     private final ChangeSupport cs = new ChangeSupport(this);
     private final CompletableFuture<Void> initialized = new CompletableFuture<>();
+    private final CompletableFuture<Capabilities> adapterCapabilities = new CompletableFuture<>();
     private final CompletableFuture<Void> terminated = new CompletableFuture<>();
     private final AtomicBoolean suspended = new AtomicBoolean();
     private final Map<Integer, DAPThread> id2Thread = new HashMap<>(); //TODO: concurrent/synchronization!!!
@@ -152,12 +153,19 @@ public final class DAPDebugger implements IDebugProtocolClient {
         in = DAPConfigurationAccessor.getInstance().getIn(config);
         Launcher<IDebugProtocolServer> serverLauncher = DSPLauncher.createClientLauncher(this, in, DAPConfigurationAccessor.getInstance().getOut(config));//, false, new PrintWriter(System.err));
         launched = serverLauncher.startListening();
+        DAPProtocol.watchConnection(launched,() -> terminated(null));
         server = serverLauncher.getRemoteProxy();
         InitializeRequestArguments initialize = new InitializeRequestArguments();
-        initialize.setAdapterID("dap");
+        initialize.setAdapterID(String.valueOf(DAPConfigurationAccessor.getInstance().getConfiguration(config).getOrDefault("type", "dap")));
         initialize.setLinesStartAt1(true);
         initialize.setColumnsStartAt1(true);
-        Capabilities cap = server.initialize(initialize).get();
+        initialize.setPathFormat("path");
+        try {
+            adapterCapabilities.complete(server.initialize(initialize).get(20, TimeUnit.SECONDS));
+        } catch (Exception ex) {
+            adapterCapabilities.completeExceptionally(ex);
+            throw ex;
+        }
         CompletableFuture<Void> connection;
         if (!DAPConfigurationAccessor.getInstance().getDelayLaunch(config)) {
             connection = switch (type) {
@@ -182,6 +190,9 @@ public final class DAPDebugger implements IDebugProtocolClient {
                 });
             });
         }
+        connection.whenComplete((result, error) -> {
+            if (error != null) initialized.completeExceptionally(error);
+        });
         return CompletableFuture.allOf(connection, initialized);
     }
 
@@ -190,7 +201,7 @@ public final class DAPDebugger implements IDebugProtocolClient {
         WORKER.post(() -> {
             try {
                 setBreakpoints(d -> true);
-                server.configurationDone(new ConfigurationDoneArguments()).get();
+                DAPProtocol.configurationDone(server, adapterCapabilities.get()).get();
                 initialized.complete(null);
                 Runnable r = runAfterConfigureDone.get();
                 if (r != null) {
@@ -232,7 +243,27 @@ public final class DAPDebugger implements IDebugProtocolClient {
 
             breakpoints.setSource(src);
             breakpoints.setBreakpoints(e.getValue().toArray(SourceBreakpoint[]::new));
-            server.setBreakpoints(breakpoints).get(); //wait using .get()?
+            var response = server.setBreakpoints(breakpoints).get();
+            if (response != null && response.getBreakpoints() != null) {
+                for (var breakpoint : response.getBreakpoints()) {
+                    getConsoleIO().getOut().println("Breakpoint " + e.getKey() + ":" + breakpoint.getLine()
+                            + (breakpoint.isVerified() ? " verified" : " pending (not yet bound)")
+                            + (breakpoint.getMessage() == null ? "" : ": " + breakpoint.getMessage()));
+                }
+            }
+        }
+    }
+
+    @Override
+    public void breakpoint(org.eclipse.lsp4j.debug.BreakpointEventArguments args) {
+        var breakpoint = args.getBreakpoint();
+        if (breakpoint != null) {
+            var source = breakpoint.getSource();
+            getConsoleIO().getOut().println("Breakpoint "
+                    + (source == null ? "#" + breakpoint.getId() : source.getPath())
+                    + ":" + breakpoint.getLine()
+                    + (breakpoint.isVerified() ? " verified" : " pending (not yet bound)")
+                    + (breakpoint.getMessage() == null ? "" : ": " + breakpoint.getMessage()));
         }
     }
 
@@ -290,8 +321,8 @@ public final class DAPDebugger implements IDebugProtocolClient {
 
     @Override
     public void terminated(TerminatedEventArguments args) {
-        initialized.complete(null);
-        terminated.complete(null);
+        initialized.completeExceptionally(new IOException("Debug adapter disconnected before startup completed."));
+        if (!terminated.complete(null)) return;
         WORKER.post(() -> { //TODO: what if something else is running in WORKER? And OK to coalescence all the below?
             cs.fireChange(); //TODO: in a different thread?
             engineProvider.getDestructor().killEngine();
@@ -503,6 +534,10 @@ public final class DAPDebugger implements IDebugProtocolClient {
     }
 
     public static void startDebugger(DAPConfiguration config, Type type) throws Exception {
+        startDebuggerAsync(config, type);
+    }
+
+    public static CompletableFuture<Void> startDebuggerAsync(DAPConfiguration config, Type type) throws Exception {
         SessionProvider sessionProvider = new SessionProvider () {
             @Override
             public String getSessionName () {
@@ -534,7 +569,17 @@ public final class DAPDebugger implements IDebugProtocolClient {
         DebuggerEngine[] es = DebuggerManager.getDebuggerManager ().
             startDebugging (di);
         DAPDebugger debugger = es[0].lookupFirst(null, DAPDebugger.class);
-        debugger.connect(config, type);
+        try {
+            return debugger.connect(config, type).orTimeout(30, TimeUnit.SECONDS).whenComplete((result, error) -> {
+                if (error != null) {
+                    LOG.log(Level.WARNING, "Debug adapter startup failed", error);
+                    debugger.terminated(null);
+                }
+            });
+        } catch (Exception ex) {
+            debugger.terminated(null);
+            throw ex;
+        }
     }
 
     //non-standard extension of vscode-js-debug:

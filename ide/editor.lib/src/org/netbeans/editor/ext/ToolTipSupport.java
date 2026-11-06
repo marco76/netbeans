@@ -393,6 +393,22 @@ public class ToolTipSupport {
         }
 
         JEditorPane tt = new HtmlTextToolTip();
+        tt.setEditable(false);
+        tt.addHyperlinkListener(event -> {
+            String target = event.getDescription();
+            if (event.getEventType() != javax.swing.event.HyperlinkEvent.EventType.ACTIVATED
+                    || target == null || !target.startsWith("editor-action:")) { // NOI18N
+                return;
+            }
+            JTextComponent editor = extEditorUI.getComponent();
+            if (editor == null) return;
+            String actionName = target.substring("editor-action:".length()); // NOI18N
+            Action action = editor.getActionMap().get(actionName);
+            if (action != null && action.isEnabled()) {
+                setToolTipVisible(false);
+                action.actionPerformed(new ActionEvent(editor, ActionEvent.ACTION_PERFORMED, actionName));
+            }
+        });
         /* See NETBEANS-403. It still appears possible to use Escape to close the popup when the
         focus is in the editor. */
         tt.putClientProperty(SUPPRESS_POPUP_KEYBOARD_FORWARDING_CLIENT_PROPERTY_KEY, true);
@@ -417,12 +433,35 @@ public class ToolTipSupport {
             tt.setBackground(backColor);
         }
 
+        Color docBackground = UIManager.getColor("nb.completion.documentation.background"); // NOI18N
+        Color docForeground = UIManager.getColor("nb.completion.documentation.foreground"); // NOI18N
+        if (docBackground != null) tt.setBackground(docBackground);
+        if (docForeground != null) tt.setForeground(docForeground);
+        Color border = UIManager.getColor("nb.completion.borderColor"); // NOI18N
+        if (border == null) border = UIManager.getColor("Separator.foreground"); // NOI18N
+        if (border == null) border = tt.getForeground();
         tt.setOpaque(true);
         tt.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(tt.getForeground()),
-            BorderFactory.createEmptyBorder(0, 3, 0, 3)
+            BorderFactory.createLineBorder(border),
+            BorderFactory.createEmptyBorder(10, 14, 10, 14)
         ));
         tt.setContentType("text/html"); //NOI18N
+        tt.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        // Keep styles local: HTMLEditorKit's default stylesheet is shared across editors.
+        javax.swing.text.html.HTMLEditorKit kit = (javax.swing.text.html.HTMLEditorKit) tt.getEditorKit();
+        javax.swing.text.html.StyleSheet css = new javax.swing.text.html.StyleSheet();
+        css.addStyleSheet(kit.getStyleSheet());
+        css.addRule("body { margin: 0; } p { margin-top: 4px; margin-bottom: 8px; }"); // NOI18N
+        css.addRule("h1 { font-size: 125%; } h2 { font-size: 115%; } h3 { font-size: 105%; }"); // NOI18N
+        css.addRule("h1, h2, h3 { margin-top: 8px; margin-bottom: 6px; }"); // NOI18N
+        css.addRule("pre { padding: 8px; margin-top: 6px; margin-bottom: 8px; } td, th { padding: 4px; }"); // NOI18N
+        Color code = UIManager.getColor("nb.completion.documentation.codeBackground"); // NOI18N
+        if (code != null) css.addRule("pre, code, tt { background-color: " + String.format("#%02x%02x%02x", code.getRed(), code.getGreen(), code.getBlue()) + "; }"); // NOI18N
+        Color link = UIManager.getColor("nb.html.link.foreground"); // NOI18N
+        if (link != null) css.addRule("a { color: " + String.format("#%02x%02x%02x", link.getRed(), link.getGreen(), link.getBlue()) + "; text-decoration: none; }"); // NOI18N
+        kit.setStyleSheet(css);
+        // Recreate the empty document so it uses the local stylesheet before content is loaded.
+        tt.setDocument(kit.createDefaultDocument());
 
         return tt;
     }
@@ -505,12 +544,19 @@ public class ToolTipSupport {
             tt.setBackground(backColor);
         }
 
+        Color docBackground = UIManager.getColor("nb.completion.documentation.background"); // NOI18N
+        Color docForeground = UIManager.getColor("nb.completion.documentation.foreground"); // NOI18N
+        if (docBackground != null) tt.setBackground(docBackground);
+        if (docForeground != null) tt.setForeground(docForeground);
+        Color border = UIManager.getColor("nb.completion.borderColor"); // NOI18N
+        if (border == null) border = UIManager.getColor("Separator.foreground"); // NOI18N
+        if (border == null) border = tt.getForeground();
         tt.setOpaque(true);
         tt.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(tt.getForeground()),
-            BorderFactory.createEmptyBorder(0, 3, 0, 3)
+            BorderFactory.createLineBorder(border),
+            BorderFactory.createEmptyBorder(10, 14, 10, 14)
         ));
-        
+
         return tt;
     }
 

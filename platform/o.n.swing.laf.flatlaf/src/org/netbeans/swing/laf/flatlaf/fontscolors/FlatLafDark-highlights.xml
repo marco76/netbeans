@@ -32,9 +32,9 @@
     <fontcolor name="highlight-search" bgColor="ff32593d"/>
     <fontcolor name="hyperlinks" foreColor="ff287bde" underline="ff287bde"/>
     <fontcolor name="inc-search" foreColor="black" bgColor="ffffb442"/>
-    <fontcolor name="indent-guide-lines" foreColor="darkGray"/>
+    <fontcolor name="indent-guide-lines" foreColor="ff3c3f41"/>
     <fontcolor name="indent-whitespace"/>
-    <fontcolor name="line-number" foreColor="ff888888" bgColor="ff313335"/>
+    <fontcolor name="line-number" foreColor="ff787c82" bgColor="ff2b2b2b"/>
     <fontcolor name="nbeditor-bracesMatching-match" foreColor="ffffef28" bgColor="ff3b514d"/>
     <fontcolor name="nbeditor-bracesMatching-match-multichar" bgColor="ff3b514d"/>
     <fontcolor name="nbeditor-bracesMatching-mismatch" bgColor="ffd1243b"/>

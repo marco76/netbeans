@@ -19,6 +19,7 @@
 
 package org.netbeans.modules.editor.impl.highlighting;
 
+import java.awt.Color;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -31,8 +32,10 @@ import javax.swing.text.Element;
 import javax.swing.text.JTextComponent;
 import javax.swing.text.StyleConstants;
 import org.netbeans.api.editor.EditorRegistry;
+import org.netbeans.api.editor.mimelookup.MimeLookup;
 import org.netbeans.api.editor.settings.AttributesUtilities;
 import org.netbeans.api.editor.settings.EditorStyleConstants;
+import org.netbeans.api.editor.settings.FontColorSettings;
 import org.netbeans.editor.AnnotationDesc;
 import org.netbeans.editor.AnnotationType;
 import org.netbeans.editor.Annotations;
@@ -223,7 +226,7 @@ public final class AnnotationsHighlighting extends AbstractHighlightsContainer i
                     }
                     if (annotationType.isUseHighlightColor()) {
                         l.add(StyleConstants.Background);
-                        l.add(annotationType.getHighlight());
+                        l.add(editorHighlight(annotationType.getHighlight()));
                     }
                     if (annotationType.isUseWaveUnderlineColor()) {
                         l.add(EditorStyleConstants.WaveUnderlineColor);
@@ -240,6 +243,29 @@ public final class AnnotationsHighlighting extends AbstractHighlightsContainer i
                     cache.put(annotationType, attrs);
                 }
                 return attrs;
+            }
+        }
+
+        private Color editorHighlight(Color highlight) {
+            FontColorSettings settings = MimeLookup.getLookup(
+                    DocumentUtilities.getMimeType(document)).lookup(FontColorSettings.class);
+            AttributeSet defaults = settings != null ? settings.getFontColors("default") : null; //NOI18N
+            Color background = defaults != null
+                    ? (Color) defaults.getAttribute(StyleConstants.Background) : null;
+            if (highlight == null || background == null
+                    || background.getRed() * 299 + background.getGreen() * 587
+                    + background.getBlue() * 114 >= 128000) {
+                return highlight;
+            }
+            // Older/custom dark profiles can inherit the light profile's annotation
+            // defaults. Adapt only those defaults, preserving custom colors.
+            switch (highlight.getRGB()) {
+                case 0xfffc9d9f: return new Color(0x4b3034);
+                case 0xffdcdcd8: return new Color(0x373337);
+                case 0xffbde6aa: return new Color(0x304536);
+                case 0xffe9ffe6: return new Color(0x303d33);
+                case 0xffd1ffbc: return new Color(0x36503a);
+                default: return highlight;
             }
         }
     }

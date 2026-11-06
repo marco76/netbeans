@@ -161,12 +161,11 @@ public final class SearchBar extends JPanel implements PropertyChangeListener {
         findLabel = new JLabel();
         Mnemonics.setLocalizedText(findLabel, NbBundle.getMessage(SearchBar.class, "CTL_Find")); // NOI18N
         findLabel.setLabelFor(incSearchTextField);
+        findLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 6));
         add(findLabel);
         add(incSearchComboBox);
 
-        final JToolBar.Separator leftSeparator = new JToolBar.Separator();
-        leftSeparator.setOrientation(SwingConstants.VERTICAL);
-        add(leftSeparator);
+        add(Box.createHorizontalStrut(6));
 
         findPreviousButton = SearchButton.createButton("org/netbeans/modules/editor/search/resources/find_previous.png", "CTL_FindPrevious"); // NOI18N
         findPreviousButton.setToolTipText(NbBundle.getMessage(SearchBar.class, "TOOLTIP_IncrementalSearchText")); //NOI18N
@@ -200,9 +199,11 @@ public final class SearchBar extends JPanel implements PropertyChangeListener {
         });
         add(selectAllButton);
         
+        add(Box.createHorizontalStrut(4));
         final JToolBar.Separator rightSeparator = new JToolBar.Separator();
         rightSeparator.setOrientation(SwingConstants.VERTICAL);
         add(rightSeparator);
+        add(Box.createHorizontalStrut(4));
 
         matchCase = SearchButton.createToggleButton("org/netbeans/modules/editor/search/resources/matchCase.png"); //NOI18N
         processToggleButton(matchCase, EditorFindSupport.FIND_MATCH_CASE);
@@ -234,8 +235,13 @@ public final class SearchBar extends JPanel implements PropertyChangeListener {
         EditorFindSupport.getInstance().addPropertyChangeListener(WeakListeners.propertyChange(this, EditorFindSupport.getInstance()));
         
         matches = new JLabel();
-        add(Box.createHorizontalGlue());
+        Color mutedFg = UIManager.getColor("Label.disabledForeground"); // NOI18N
+        if (mutedFg != null) {
+            matches.setForeground(mutedFg);
+        }
+        matches.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
         add(matches);
+        add(Box.createHorizontalGlue());
 
         add(Box.createHorizontalStrut(8)); //spacer in the ending of the toolbar
 
@@ -1039,12 +1045,20 @@ public final class SearchBar extends JPanel implements PropertyChangeListener {
         lastCurrentPosEnd = currentposEnd;
         if (incSearchTextField.getText().isEmpty()) {
             Mnemonics.setLocalizedText(matches, ""); //NOI18N
+            incSearchComboBox.putClientProperty("JComponent.outline", null); // NOI18N
         } else if (numMatches == 0) {
             Mnemonics.setLocalizedText(matches, NbBundle.getMessage(SearchBar.class, "0_matches")); //NOI18N
-        } else if (numMatches == 1) {
-            Mnemonics.setLocalizedText(matches, NbBundle.getMessage(SearchBar.class, "1_matches")); //NOI18N
+            if (NOT_FOUND != null) {
+                matches.setForeground(NOT_FOUND);
+            }
+            incSearchComboBox.putClientProperty("JComponent.outline", "error"); // NOI18N
         } else {
-            if (pos == 0) {
+            Color mutedFg = UIManager.getColor("Label.disabledForeground"); // NOI18N
+            matches.setForeground(mutedFg != null ? mutedFg : DEFAULT_FG_COLOR);
+            incSearchComboBox.putClientProperty("JComponent.outline", null); // NOI18N
+            if (numMatches == 1) {
+                Mnemonics.setLocalizedText(matches, NbBundle.getMessage(SearchBar.class, "1_matches")); //NOI18N
+            } else if (pos == 0) {
                 Mnemonics.setLocalizedText(matches, NbBundle.getMessage(SearchBar.class, "n_matches", numMatches)); //NOI18N
             } else {
                 Mnemonics.setLocalizedText(matches, NbBundle.getMessage(SearchBar.class, "i_n_matches", pos, numMatches)); //NOI18N
@@ -1290,12 +1304,16 @@ public final class SearchBar extends JPanel implements PropertyChangeListener {
 
     private static final class SeparatorBorder implements Border {
         private static final int BORDER_WIDTH = 1;
-        private final Insets INSETS = new Insets(BORDER_WIDTH, 0, 0, 0);
+        private final Insets INSETS = new Insets(BORDER_WIDTH + 3, 0, 3, 4);
 
         @Override
         public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
             Color originalColor = g.getColor();
-            g.setColor (UIManager.getColor ("controlShadow")); //NOI18N
+            Color sepColor = UIManager.getColor("Separator.foreground"); // NOI18N
+            if (sepColor == null) {
+                sepColor = UIManager.getColor("controlShadow"); // NOI18N
+            }
+            g.setColor(sepColor);
             g.drawLine(0, 0, c.getWidth(), 0);
             g.setColor(originalColor);
         }

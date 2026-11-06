@@ -23,13 +23,12 @@ package org.netbeans.modules.terminal.iocontainer;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.Insets;
 import java.util.List;
 import javax.swing.Action;
 import javax.swing.BoxLayout;
-import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JToolBar;
 
@@ -446,41 +445,27 @@ abstract class TerminalContainerCommon extends TerminalContainer implements IOCo
     }
 
     private void fixSize(JToolBar actionBar) {
-        Insets ins = actionBar.getMargin();
-        JButton dummy = new JButton();
-        dummy.setBorderPainted(false);
-        dummy.setOpaque(false);
-        dummy.setText(null);
-        dummy.setIcon(new Icon() {
-
-	    @Override
-            public int getIconHeight() {
-                return 16;
-            }
-
-	    @Override
-            public int getIconWidth() {
-                return 16;
-            }
-
-            @SuppressWarnings(value = "empty-statement")
-	    @Override
-            public void paintIcon(Component c, Graphics g, int x, int y) {
-                ;
-            }
-        });
-        actionBar.add(dummy);
-        Dimension buttonPref = dummy.getPreferredSize();
-        Dimension minDim = new Dimension(buttonPref.width + ins.left + ins.right, buttonPref.height + ins.top + ins.bottom);
-        actionBar.setMinimumSize(minDim);
-        actionBar.setPreferredSize(minDim);
-        actionBar.remove(dummy);
+        actionBar.setBorder(javax.swing.BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        actionBar.setRollover(true);
+        Dimension size = new Dimension(42, 42);
+        actionBar.setMinimumSize(size);
+        actionBar.setPreferredSize(size);
     }
 
     private JButton adjustButton(JButton b) {
         b.setBorderPainted(false);
         b.setOpaque(false);
         b.setText(null);
+        Dimension size = new Dimension(34, 34);
+        b.setMinimumSize(size);
+        b.setPreferredSize(size);
+        b.setMaximumSize(size);
+        b.setAlignmentX(Component.CENTER_ALIGNMENT);
+        b.setMargin(new Insets(0, 0, 0, 0));
+        b.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+        b.setFocusable(false);
+        b.setRolloverEnabled(true);
+        b.putClientProperty("JButton.buttonType", "toolBarButton"); // NOI18N
         b.putClientProperty("hideActionText", Boolean.TRUE);	// NOI18N
         // NOI18N
         return b;

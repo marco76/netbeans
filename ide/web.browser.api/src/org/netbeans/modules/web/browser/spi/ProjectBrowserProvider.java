@@ -47,6 +47,9 @@ public interface ProjectBrowserProvider {
 
     void setActiveBrowser(WebBrowser browser) throws IllegalArgumentException, IOException;
 
+    /** True when the project supplies browser selection in its own toolbar control. */
+    default boolean hasIntegratedToolbar() { return false; }
+
     boolean hasCustomizer();
 
     void customize();

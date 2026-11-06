@@ -21,24 +21,24 @@
 -->
 <!DOCTYPE fontscolors PUBLIC "-//NetBeans//DTD Editor Fonts and Colors settings 1.1//EN" "http://www.netbeans.org/dtds/EditorFontsColors-1_1.dtd">
 <fontscolors>
-    <fontcolor name="char" foreColor="1E9347"/>
-    <fontcolor name="comment" foreColor="969696"/>
-    <fontcolor name="default" foreColor="black" bgColor="white"/>
+    <fontcolor name="char" foreColor="237A45"/>
+    <fontcolor name="comment" foreColor="737D89"/>
+    <fontcolor name="default" foreColor="242830" bgColor="white"/>
     <fontcolor name="entity-reference" foreColor="black" default="default"><font style="bold"/></fontcolor>
-    <fontcolor name="error" waveUnderlined="red"/>
+    <fontcolor name="error" waveUnderlined="C4515C"/>
     <fontcolor name="field" foreColor="CE54B8" default="identifier"/>
     <fontcolor name="identifier"/>
-    <fontcolor name="keyword" foreColor="336BDD"/>
+    <fontcolor name="keyword" foreColor="2F60BA"/>
     <fontcolor name="mark-occurrences" bgColor="D7E6CB"/>
-    <fontcolor name="markup-attribute" default="field"/>
-    <fontcolor name="markup-attribute-value" default="string"/>
-    <fontcolor name="markup-element" default="keyword"/>
+    <fontcolor name="markup-attribute" foreColor="795B9E"/>
+    <fontcolor name="markup-attribute-value" foreColor="287448"/>
+    <fontcolor name="markup-element" foreColor="396998"/>
     <fontcolor name="method" default="identifier"/>
     <fontcolor name="number" foreColor="black"/>
     <fontcolor name="operator"/>
     <fontcolor name="separator"/>
-    <fontcolor name="string" foreColor="1E9347"/>
-    <fontcolor name="url" foreColor="287BDE" underline="287BDE"/>
+    <fontcolor name="string" foreColor="237A45"/>
+    <fontcolor name="url"/>
     <fontcolor name="warning" waveUnderlined="FFA500"/>
     <fontcolor name="whitespace" foreColor="black"/>
 </fontscolors>

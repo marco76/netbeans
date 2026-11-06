@@ -112,6 +112,7 @@
                 </test-type>
             </test-dependencies>
             <friend-packages>
+                <friend>org.netbeans.modules.angular</friend>
                 <friend>org.netbeans.modules.debugger.jpda.js</friend>
                 <friend>org.netbeans.modules.debugger.jpda.truffle</friend>
                 <friend>org.netbeans.modules.java.lsp.server</friend>

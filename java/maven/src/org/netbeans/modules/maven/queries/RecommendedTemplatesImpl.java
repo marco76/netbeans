@@ -20,7 +20,9 @@
 package org.netbeans.modules.maven.queries;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import org.apache.maven.project.MavenProject;
 import org.netbeans.api.java.project.JavaProjectConstants;
 import org.netbeans.api.project.Project;
 import org.netbeans.api.project.ProjectUtils;
@@ -126,7 +128,23 @@ public final class RecommendedTemplatesImpl implements RecommendedTemplates, Pri
         prohibited.add(NbMavenProject.TYPE_OSGI);
     }
     
+    private boolean isSpringProject() {
+        MavenProject model = project.getLookup().lookup(NbMavenProject.class).getMavenProject();
+        return model.getDependencies().stream().anyMatch(dependency ->
+                "org.springframework".equals(dependency.getGroupId())
+                || "org.springframework.boot".equals(dependency.getGroupId()))
+                || model.getBuildPlugins().stream().anyMatch(plugin ->
+                        "org.springframework.boot".equals(plugin.getGroupId())
+                        && "spring-boot-maven-plugin".equals(plugin.getArtifactId()));
+    }
+
     @Override public String[] getRecommendedTypes() {
+        if (isSpringProject()) {
+            return Arrays.stream(JAR_APPLICATION_TYPES)
+                    .filter(type -> !"java-forms".equals(type)
+                            && !"gui-java-application".equals(type))
+                    .toArray(String[]::new);
+        }
         String packaging = project.getLookup().lookup(NbMavenProject.class).getPackagingType();
         if (packaging == null) {
             packaging = NbMavenProject.TYPE_JAR;
@@ -164,6 +182,13 @@ public final class RecommendedTemplatesImpl implements RecommendedTemplates, Pri
     }
     
     @Override public String[] getPrivilegedTemplates() {
+        if (isSpringProject()) {
+            return new String[] {
+                "Templates/Classes/Class.java",
+                "Templates/Classes/Package",
+                "Templates/Classes/Interface.java",
+            };
+        }
         String packaging = project.getLookup().lookup(NbMavenProject.class).getPackagingType();
         if (packaging == null) {
             packaging = NbMavenProject.TYPE_JAR;

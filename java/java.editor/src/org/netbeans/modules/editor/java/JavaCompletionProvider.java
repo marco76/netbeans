@@ -220,6 +220,7 @@ public class JavaCompletionProvider implements CompletionProvider {
                             ParserManager.parse(Collections.singletonList(source), task);
                             if (task.getTooltipData() != null) {
                                 toolTip.setData(task.getTooltipData(), task.getTooltipIndex());
+                                toolTip.setAnnotationAttributes(task.getAnnotationAttributes(), task.getActiveSignatureIndex());
                                 resultSet.setToolTip(toolTip);
                                 toolTipOffset = task.getTooltipOffset();
                             }

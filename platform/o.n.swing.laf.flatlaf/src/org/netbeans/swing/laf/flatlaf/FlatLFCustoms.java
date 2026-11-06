@@ -88,15 +88,15 @@ public class FlatLFCustoms extends LFCustoms {
             SLIDING_BUTTON_UI, "org.netbeans.swing.laf.flatlaf.ui.FlatSlidingButtonUI", // NOI18N
 
             EDITOR_TABSCOMPONENT_BORDER, BorderFactory.createEmptyBorder(),
-            EDITOR_TOOLBAR_BORDER, new CompoundBorder(DPISafeBorder.matte(0, 0, 1, 0, editorContentBorderColor), BorderFactory.createEmptyBorder(1, 0, 1, 0)),
+            EDITOR_TOOLBAR_BORDER, new CompoundBorder(DPISafeBorder.matte(0, 0, 1, 0, editorContentBorderColor), BorderFactory.createEmptyBorder(2, 4, 2, 4)),
             "NbExplorerView.quicksearch.border.instance",
-                new CompoundBorder(DPISafeBorder.matte(1, 0, 0, 0, editorContentBorderColor), BorderFactory.createEmptyBorder(2, 6, 2, 2)),
+                new CompoundBorder(DPISafeBorder.matte(1, 0, 0, 0, editorContentBorderColor), BorderFactory.createEmptyBorder(3, 6, 3, 4)),
             EDITOR_TAB_CONTENT_BORDER, DPISafeBorder.matte(0, 1, 1, 1, editorContentBorderColor),
             VIEW_TAB_CONTENT_BORDER, DPISafeBorder.matte(0, 1, 1, 1, UIManager.getColor("TabbedContainer.view.contentBorderColor")), // NOI18N
 
             // scale on Java 8 and Linux
-            SPLIT_PANE_DIVIDER_SIZE_VERTICAL, UIScale.scale(4),
-            SPLIT_PANE_DIVIDER_SIZE_HORIZONTAL, UIScale.scale(4),
+            SPLIT_PANE_DIVIDER_SIZE_VERTICAL, UIScale.scale(2),
+            SPLIT_PANE_DIVIDER_SIZE_HORIZONTAL, UIScale.scale(2),
 
             // for org.openide.awt.CloseButtonFactory
             "nb.close.tab.icon.enabled.icon", FlatTabControlIcon.get(TabControlButton.ID_CLOSE_BUTTON, TabControlButton.STATE_DEFAULT), // NOI18N

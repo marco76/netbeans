@@ -213,7 +213,7 @@ public final class CustomizableSideBar {
     /**
      * Width of the sidebar's gap which has the same background as the main editor
      */
-    private static final int SIDEBAR_GAP_WIDTH = 1;
+    private static final int SIDEBAR_GAP_WIDTH = 4;
     
     /**
      * Degenerated "right line border"; displays line at the right only. Pads
@@ -322,10 +322,22 @@ public final class CustomizableSideBar {
             }
             textBkColor = bkgSource.getBackground();
             if (back == null) {
+                AttributeSet lineAs = fcs.getFontColors(FontColorNames.LINE_NUMBER_COLORING);
+                if (lineAs != null) {
+                    back = (Color) lineAs.getAttribute(StyleConstants.Background);
+                }
+            }
+            if (back == null) {
                 back = bkgSource.getBackground();
                 disableBackground = true;
             }
             setBackground(back);
+            if (line == null) {
+                AttributeSet guideAs = fcs.getFontColors(FontColorNames.INDENT_GUIDE_LINES);
+                if (guideAs != null) {
+                    line = (Color) guideAs.getAttribute(StyleConstants.Foreground);
+                }
+            }
             if (line == null || line.equals(back)) {
                 lineColor = null;
             } else {
@@ -353,15 +365,18 @@ public final class CustomizableSideBar {
             }
             
             Graphics2D g2d = (Graphics2D)g.create();
-            if (thick >= 1) {
+            if (thick >= 1 && this.lineColor != null) {
                 g2d.setColor(this.lineColor);
                 int x2 = x + width - ((thick +1) / 2);
                 g2d.drawLine(x2 - SIDEBAR_GAP_WIDTH, 
                         0, x2 - SIDEBAR_GAP_WIDTH, y + height - 1);
             }
-            g2d.setColor(textBkColor);
-            int gap = width - SIDEBAR_GAP_WIDTH;
-            g2d.drawRect(gap, 0, width - gap, height);
+            if (textBkColor != null) {
+                g2d.setColor(textBkColor);
+                int gap = width - SIDEBAR_GAP_WIDTH;
+                g2d.fillRect(gap, 0, width - gap, height);
+            }
+            g2d.dispose();
         }
     }
     

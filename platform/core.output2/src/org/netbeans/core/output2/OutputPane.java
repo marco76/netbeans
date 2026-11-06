@@ -31,15 +31,46 @@ import java.beans.PropertyChangeListener;
 import javax.swing.text.Caret;
 import org.netbeans.core.output2.options.OutputOptions;
 import org.openide.util.NbPreferences;
+import org.openide.util.WeakListeners;
 
 
 class OutputPane extends AbstractOutputPane {
 
     OutputTab parent;
+    private Font normalFont;
+    private final PropertyChangeListener presenterListener = event -> {
+        if ("nb.presenter.fontIncrease".equals(event.getPropertyName())
+                || "nb.presenter.outputFontSize".equals(event.getPropertyName())) { // NOI18N
+            if (SwingUtilities.isEventDispatchThread()) {
+                refreshPresenterFont();
+            } else {
+                SwingUtilities.invokeLater(this::refreshPresenterFont);
+            }
+        }
+    };
     PropertyChangeListener editorKitListener = new OutputEditorKitListener();
 
     public OutputPane(OutputTab parent) {
         this.parent = parent;
+        normalFont = textView.getFont();
+        UIManager.getDefaults().addPropertyChangeListener(
+                WeakListeners.propertyChange(presenterListener, UIManager.getDefaults()));
+        refreshPresenterFont();
+    }
+
+    @Override
+    public void setViewFont(Font font) {
+        normalFont = font;
+        refreshPresenterFont();
+    }
+
+    private void refreshPresenterFont() {
+        if (normalFont != null) {
+            int increase = Math.max(0, Math.min(24, UIManager.getInt("nb.presenter.fontIncrease"))); // NOI18N
+            int target = UIManager.getInt("nb.presenter.outputFontSize");
+            super.setViewFont(target > 0 ? normalFont.deriveFont((float) target) : increase == 0 ? normalFont
+                    : normalFont.deriveFont(normalFont.getSize2D() + increase));
+        }
     }
 
     @Override
@@ -123,7 +154,7 @@ class OutputPane extends AbstractOutputPane {
     public void setWrapped (boolean val) {
         if (val != isWrapped() || !(getEditorKit() instanceof OutputEditorKit)) {
             NbPreferences.forModule(OutputPane.class).putBoolean("wrap", val); //NOI18N
-            textView.setFont(OutputOptions.getDefault().getFont(val));
+            setViewFont(parent.getIO().getOptions().getFont(val));
             final int pos = textView.getCaret().getDot();
             Cursor cursor = textView.getCursor();
             try {

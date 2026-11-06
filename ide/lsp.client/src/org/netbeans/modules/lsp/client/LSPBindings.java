@@ -462,13 +462,19 @@ public class LSPBindings {
        tdcc.setDocumentSymbol(dsc);
        tdcc.setSemanticTokens(new SemanticTokensCapabilities(new SemanticTokensClientCapabilitiesRequests(true), KNOWN_TOKEN_TYPES, KNOWN_TOKEN_MODIFIERS, Arrays.asList()));
        CodeActionCapabilities codeActionCapa = new CodeActionCapabilities();
-       codeActionCapa.setResolveSupport(new CodeActionResolveSupportCapabilities(List.of("edit")));
+       codeActionCapa.setCodeActionLiteralSupport(new org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities(
+               new org.eclipse.lsp4j.CodeActionKindCapabilities(List.of("", "quickfix", "refactor", "source"))));
+       codeActionCapa.setDataSupport(true);
+       codeActionCapa.setDisabledSupport(true);
+       codeActionCapa.setIsPreferredSupport(true);
+       codeActionCapa.setResolveSupport(new CodeActionResolveSupportCapabilities(List.of("edit", "command")));
        tdcc.setCodeAction(codeActionCapa);
        CompletionCapabilities completionCapa = new CompletionCapabilities();
        CompletionItemCapabilities completionItemCapa = new CompletionItemCapabilities();
        completionItemCapa.setLabelDetailsSupport(true);
        completionItemCapa.setSnippetSupport(true);
        completionItemCapa.setResolveSupport(new CompletionItemResolveSupportCapabilities(List.of("additionalTextEdits", "documentation", "textEdit")));
+       completionCapa.setCompletionItemKind(new org.eclipse.lsp4j.CompletionItemKindCapabilities(Arrays.asList(org.eclipse.lsp4j.CompletionItemKind.values())));
        completionCapa.setCompletionItem(completionItemCapa);
        tdcc.setCompletion(completionCapa);
        WorkspaceClientCapabilities wcc = new WorkspaceClientCapabilities();

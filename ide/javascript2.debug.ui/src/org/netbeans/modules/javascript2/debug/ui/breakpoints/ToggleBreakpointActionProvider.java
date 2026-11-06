@@ -32,6 +32,7 @@ import org.netbeans.spi.debugger.ActionsProvider;
 import org.netbeans.spi.debugger.ActionsProviderSupport;
 import org.netbeans.spi.debugger.ui.EditorContextDispatcher;
 import org.openide.text.Line;
+import org.openide.filesystems.FileObject;
 import org.openide.util.WeakListeners;
 
 /**
@@ -62,19 +63,27 @@ public class ToggleBreakpointActionProvider extends ActionsProviderSupport
             return ;
         }
         DebuggerManager d = DebuggerManager.getDebuggerManager();
-        boolean add = true;
-        for (Breakpoint breakpoint : d.getBreakpoints()) {
-            if (breakpoint instanceof JSLineBreakpoint &&
-                JSUtils.getLine((JSLineBreakpoint) breakpoint).equals(line)) {
-
-                d.removeBreakpoint(breakpoint);
-                add = false;
-                break;
-            }
+        FileObject file = line.getLookup().lookup(FileObject.class);
+        if (file == null) {
+            return;
         }
-        if (add) {
+        if (!removeBreakpoints(d, file, line.getLineNumber() + 1)) {
             d.addBreakpoint(JSUtils.createLineBreakpoint(line));
         }
+    }
+
+    static boolean removeBreakpoints(DebuggerManager manager, FileObject file, int lineNumber) {
+        boolean removed = false;
+        // Match the source location, independent of editor Line object identity.
+        // Remove all duplicates so a second annotation cannot remain underneath.
+        for (Breakpoint breakpoint : manager.getBreakpoints()) {
+            if (breakpoint instanceof JSLineBreakpoint js
+                    && file.equals(js.getFileObject()) && js.getLineNumber() == lineNumber) {
+                manager.removeBreakpoint(breakpoint);
+                removed = true;
+            }
+        }
+        return removed;
     }
 
     @Override

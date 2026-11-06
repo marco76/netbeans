@@ -2612,7 +2612,12 @@ public class BaseDocument extends AbstractDocument implements AtomicLockDocument
         /** Set to a sane font (not proportional!). */
         public @Override void install(JEditorPane pane) {
             super.install(pane);
-            pane.setFont(new Font("Monospaced", Font.PLAIN, pane.getFont().getSize() + 1)); //NOI18N
+            Font currentFont = pane.getFont();
+            if (currentFont != null) {
+                pane.setFont(currentFont.deriveFont(Font.PLAIN, (float) currentFont.getSize() + 1));
+            } else {
+                pane.setFont(new Font("Monospaced", Font.PLAIN, 14)); //NOI18N
+            }
         }
     } // End of PlainEditorKit class
 

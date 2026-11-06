@@ -328,7 +328,7 @@ class DiffViewManager implements ChangeListener {
             int end = rowOffset(leftRows, diff.getFirstEnd() + 1);
             
             SimpleAttributeSet attrs = new SimpleAttributeSet();
-            StyleConstants.setBackground(attrs, master.getColor(diff));
+            StyleConstants.setBackground(attrs, master.getInlineColor(diff));
             hilites.add(new HighLight(rowStart + start, rowStart + end, attrs));
         }
         return hilites;
@@ -359,7 +359,7 @@ class DiffViewManager implements ChangeListener {
             int end = rowOffset(rightRows, diff.getSecondEnd() + 1);
             
             SimpleAttributeSet attrs = new SimpleAttributeSet();
-            StyleConstants.setBackground(attrs, master.getColor(diff));
+            StyleConstants.setBackground(attrs, master.getInlineColor(diff));
             hilites.add(new HighLight(rowStart + start, rowStart + end, attrs));
         }
         return hilites;

@@ -148,7 +148,8 @@ public class MarkdownViewerElement implements MultiViewElement {
 
     private final Task updater = RP.create(MarkdownViewerElement.this::updateView);
 
-    private StyledDocument source;
+    private volatile StyledDocument source;
+    private volatile boolean showing;
 
     //Font config update listener
     private final PropertyChangeListener pcl = this::colorProfileChange;
@@ -206,13 +207,19 @@ public class MarkdownViewerElement implements MultiViewElement {
 
     @Override
     public void componentShowing() {
+        showing = true;
         EditorCookie ec = getLookup().lookup(EditorCookie.class);
         if (ec != null) {
             RP.post(() -> {
                 try {
-                    source = ec.openDocument();
-                    source.addDocumentListener(dl);
-                    updateView();
+                    StyledDocument document = ec.openDocument();
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        if (!showing) return;
+                        if (source != null) source.removeDocumentListener(dl);
+                        source = document;
+                        source.addDocumentListener(dl);
+                        updater.schedule(0);
+                    });
                 } catch (IOException ex) {
                     Exceptions.printStackTrace(ex);
                 }
@@ -222,9 +229,9 @@ public class MarkdownViewerElement implements MultiViewElement {
 
     @Override
     public void componentHidden() {
-        if (source != null) {
-            source.removeDocumentListener(dl);
-        }
+        showing = false;
+        updater.cancel();
+        if (source != null) source.removeDocumentListener(dl);
     }
 
     @Override
@@ -252,6 +259,10 @@ public class MarkdownViewerElement implements MultiViewElement {
 
     @Messages("TXT_MarkdownViewerElement_Error=<html>Something happened during markdown parsing.")
     public void updateView() {
+        if (!javax.swing.SwingUtilities.isEventDispatchThread()) {
+            javax.swing.SwingUtilities.invokeLater(this::updateView);
+            return;
+        }
         if ((source != null) && (viewer != null)) {
             try {
                 Rectangle vis = viewer.getVisibleRect();

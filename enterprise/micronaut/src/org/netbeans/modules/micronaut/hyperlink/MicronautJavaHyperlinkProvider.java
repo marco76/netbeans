@@ -182,7 +182,8 @@ public class MicronautJavaHyperlinkProvider implements HyperlinkProviderExt {
                                 span[0] = (int) sp.getStartPosition(literal) + 1;
                                 span[1] = (int) sp.getEndPosition(literal) - 1;
                             }
-                        } else if ("io.micronaut.context.annotation.Value".contentEquals(name)) {
+                        } else if ("io.micronaut.context.annotation.Value".contentEquals(name)
+                                || "org.springframework.beans.factory.annotation.Value".contentEquals(name)) {
                             String value = (String) literal.getValue();
                             Matcher matcher = INJECT.matcher(value);
                             if (matcher.find()) {

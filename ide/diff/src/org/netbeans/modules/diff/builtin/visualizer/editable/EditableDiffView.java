@@ -45,6 +45,7 @@ import org.netbeans.api.editor.fold.FoldUtilities;
 import org.netbeans.api.editor.fold.FoldHierarchyListener;
 import org.netbeans.api.editor.fold.FoldHierarchyEvent;
 import org.netbeans.modules.diff.DiffModuleConfig;
+import org.netbeans.modules.diff.builtin.provider.BuiltInDiffProvider;
 import org.netbeans.modules.editor.errorstripe.privatespi.MarkProvider;
 import org.netbeans.modules.editor.errorstripe.privatespi.Mark;
 import org.openide.util.RequestProcessor;
@@ -91,13 +92,13 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
     private static final int INITIAL_DIVIDER_SIZE = 32;
     private static final String CONTENT_TYPE_PLAIN = "text/plain";
     
-    private Stroke boldStroke = new BasicStroke(3);
+    private Stroke boldStroke = new BasicStroke(1.5f);
     
     // === Default Diff Colors ===========================================================
     private Color colorMissing;
     private Color colorAdded;
     private Color colorChanged;
-    private Color colorLines   = Color.DARK_GRAY;
+    private Color colorLines = new Color(148, 163, 184);
     private Color COLOR_READONLY_BG = new Color(255,200,200);
 
     private final Difference [] NO_DIFFERENCES = new Difference[0];
@@ -113,6 +114,15 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
     private DiffContentPanel jEditorPane2;
 
     private JEditorPane textualEditorPane;
+    private InlineDiffPanel inlinePanel;
+    private boolean inlineMode;
+    private volatile boolean ignoreWhitespace;
+    private final JLabel reviewStatus = new JLabel();
+    private JButton reviewPrevious;
+    private JButton reviewNext;
+    private JButton reviewRevert;
+    private JCheckBox collapseContext;
+
 
     private boolean secondSourceAvailable;
     private boolean firstSourceAvailable;
@@ -243,6 +253,10 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
         view.getAccessibleContext().setAccessibleName(org.openide.util.NbBundle.getMessage(EditableDiffView.class, "ACS_DiffPanelA11yName"));  // NOI18N
         view.getAccessibleContext().setAccessibleDescription(org.openide.util.NbBundle.getMessage(EditableDiffView.class, "ACS_DiffPanelA11yDesc"));  // NOI18N
         initializeTabPane(ss1, ss2);
+        if (!binaryDiff) {
+            inlinePanel = new InlineDiffPanel(this);
+            view.add(createReviewToolbar(), BorderLayout.PAGE_START);
+        }
 
         setSourceTitle(fileLabel1, title1);
         setSourceTitle(fileLabel2, title2);
@@ -340,9 +354,14 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
                                     if (rightEditor.isEditable()) {
                                         setBackgroundColorForNonEditable(leftEditor, rightEditor);
                                     }
-                                    if ((rightEditor.getBackground().getRGB() & 0xFFFFFF) == 0) {
-                                        colorLines   = Color.WHITE;
+                                    Color outline = UIManager.getColor("nb.diff.border.color"); // NOI18N
+                                    if (outline == null) {
+                                        Color background = rightEditor.getBackground();
+                                        boolean dark = background.getRed() + background.getGreen()
+                                                + background.getBlue() < 384;
+                                        outline = dark ? new Color(111, 130, 151) : new Color(148, 163, 184);
                                     }
+                                    colorLines = outline;
                                     
                                     manager.init();
                                     
@@ -565,6 +584,11 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
         if (location == -1) {
         } else {
             setDifferenceIndex(location);
+            updateReviewToolbar();
+            if (inlineMode) {
+                inlinePanel.selectDifference(location);
+                return;
+            }
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
@@ -680,6 +704,7 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
             } else {
                 setDifferenceIndex(-1);
             }
+            updateReviewToolbar();
         }
     }
     
@@ -828,7 +853,7 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
     @Override
     public int getDifferenceCount() {
         int retval = diffs.length;
-        if (jTabbedPane != null && jTabbedPane.getSelectedComponent() == textualPanel) {
+        if (!inlineMode && jTabbedPane != null && jTabbedPane.getSelectedComponent() == textualPanel) {
             retval = 0;
         }
         return retval;
@@ -836,7 +861,7 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
 
     @Override
     public boolean canSetCurrentDifference() {
-        return jTabbedPane == null || jTabbedPane.getSelectedComponent() != textualPanel;
+        return inlineMode || jTabbedPane == null || jTabbedPane.getSelectedComponent() != textualPanel;
     }
 
     @Override
@@ -898,7 +923,10 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
             return;
         }
         int cd = computeCurrentDifference(down);
-        setDifferenceIndex(cd);
+        if (!inlineMode) {
+            setDifferenceIndex(cd);
+            updateReviewToolbar();
+        }
     }
     
     @Override
@@ -967,8 +995,8 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
     /** This method is called from within the constructor to initialize the form.
      */
     private void initComponents() {
-        fileLabel1.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        fileLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        fileLabel1.setBorder(BorderFactory.createEmptyBorder(7, 12, 7, 12));
+        fileLabel1.setHorizontalAlignment(javax.swing.SwingConstants.LEADING);
         lineEndingLabel1.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         lineEndingLabel1.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         JPanel headerPanel1 = new JPanel(new BorderLayout());
@@ -980,8 +1008,8 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
         filePanel1.setLayout(new BorderLayout());
         filePanel1.add(headerPanel1, BorderLayout.PAGE_START);
 
-        fileLabel2.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
-        fileLabel2.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        fileLabel2.setBorder(BorderFactory.createEmptyBorder(7, 12, 7, 12));
+        fileLabel2.setHorizontalAlignment(javax.swing.SwingConstants.LEADING);
         lineEndingLabel2.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 4));
         
         lineEndingLabel2.setHorizontalAlignment(javax.swing.SwingConstants.LEFT);
@@ -1534,6 +1562,96 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
         }
     }
 
+    private String reviewMessage(String key, Object... arguments) {
+        return NbBundle.getMessage(EditableDiffView.class, key, arguments);
+    }
+
+    private JToolBar createReviewToolbar() {
+        JToolBar toolbar = new JToolBar();
+        toolbar.setFloatable(false);
+        toolbar.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+        reviewPrevious = new JButton(reviewMessage("Review.previous"));
+        reviewNext = new JButton(reviewMessage("Review.next"));
+        reviewRevert = new JButton(reviewMessage("Review.revert"));
+        reviewPrevious.addActionListener(event -> setCurrentDifference(Math.max(0, getDifferenceIndex() - 1)));
+        reviewNext.addActionListener(event -> setCurrentDifference(Math.min(diffs.length - 1, getDifferenceIndex() + 1)));
+        reviewRevert.addActionListener(event -> {
+            int index = getDifferenceIndex();
+            if (canRevertReviewChange(index)) rollback(diffs[index]);
+        });
+        toolbar.add(reviewPrevious);
+        toolbar.add(reviewNext);
+        toolbar.addSeparator();
+        toolbar.add(reviewStatus);
+        toolbar.addSeparator();
+        toolbar.add(reviewRevert);
+        toolbar.addSeparator();
+        JToggleButton inline = new JToggleButton(reviewMessage("Review.inline"));
+        inline.setToolTipText(reviewMessage("Review.inlineTooltip"));
+        inline.addActionListener(event -> {
+            inlineMode = inline.isSelected();
+            Component original = jTabbedPane != null ? jTabbedPane : jSplitPane1;
+            view.remove(inlineMode ? original : inlinePanel);
+            view.add(inlineMode ? inlinePanel : original, BorderLayout.CENTER);
+            collapseContext.setEnabled(inlineMode);
+            if (inlineMode) {
+                refreshInlineReview();
+            } else if (getDifferenceIndex() >= 0 && canSetCurrentDifference()) {
+                setCurrentDifference(getDifferenceIndex());
+            }
+            updateReviewToolbar();
+            support.firePropertyChange(DiffController.PROP_DIFFERENCES, null, null);
+            view.revalidate();
+            view.repaint();
+        });
+        toolbar.add(inline);
+        collapseContext = new JCheckBox(reviewMessage("Review.collapse"), true);
+        collapseContext.setToolTipText(reviewMessage("Review.collapseTooltip"));
+        collapseContext.setEnabled(false);
+        collapseContext.addActionListener(event -> inlinePanel.setCollapsed(collapseContext.isSelected()));
+        toolbar.add(collapseContext);
+        JCheckBox whitespace = new JCheckBox(reviewMessage("Review.whitespace"));
+        whitespace.setToolTipText(reviewMessage("Review.whitespaceTooltip"));
+        whitespace.addActionListener(event -> {
+            ignoreWhitespace = whitespace.isSelected();
+            reviewPrevious.setEnabled(false);
+            reviewNext.setEnabled(false);
+            reviewRevert.setEnabled(false);
+            refreshDiff(0);
+        });
+        toolbar.add(whitespace);
+        updateReviewToolbar();
+        return toolbar;
+    }
+
+    private void refreshInlineReview() {
+        try {
+            Document first = jEditorPane1.getEditorPane().getDocument();
+            Document second = jEditorPane2.getEditorPane().getDocument();
+            inlinePanel.setContent(first.getText(0, first.getLength()), second.getText(0, second.getLength()), diffs);
+            inlinePanel.selectDifference(getDifferenceIndex());
+        } catch (BadLocationException ex) {
+            LOG.log(Level.FINE, "Cannot refresh inline diff", ex); // NOI18N
+        }
+    }
+
+    private boolean canRevertReviewChange(int index) {
+        if (!isActionsEnabled() || index < 0 || index >= diffs.length || manager == null) return false;
+        DiffViewManager.DecoratedDifference[] decorations = manager.getDecorations();
+        return index < decorations.length && decorations[index].getDiff() == diffs[index]
+                && decorations[index].canRollback();
+    }
+
+    private void updateReviewToolbar() {
+        if (reviewPrevious == null) return;
+        int index = getCurrentDifference();
+        int count = getDifferenceCount();
+        reviewStatus.setText(reviewMessage("Review.status", Math.max(0, index + 1), count));
+        reviewPrevious.setEnabled(canSetCurrentDifference() && index > 0);
+        reviewNext.setEnabled(canSetCurrentDifference() && index + 1 < count);
+        reviewRevert.setEnabled(canSetCurrentDifference() && canRevertReviewChange(index));
+    }
+
     private void refreshDiff(int delayMillis) {
         refreshDiffTask.schedule(delayMillis);
     }
@@ -1551,6 +1669,7 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
                     @Override
                     public void run() {
                         diffs = differences;
+                        if (inlineMode) refreshInlineReview();
                         if (diffs != NO_DIFFERENCES) {
                             diffChanged();
                         }
@@ -1571,6 +1690,7 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
                         }
 
                         refreshDividerSize();
+                        updateReviewToolbar();
                         view.repaint();
                         diffMarkprovider.refresh();
                         if (diffs.length > 0 && !Boolean.TRUE.equals(getJComponent().getClientProperty(PROP_SMART_SCROLLING_DISABLED))) {
@@ -1617,7 +1737,17 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
             return NO_DIFFERENCES;
         }
 
-        DiffProvider diff = DiffModuleConfig.getDefault().getDefaultDiffProvider();
+        DiffProvider diff;
+        if (ignoreWhitespace) {
+            BuiltInDiffProvider provider = new BuiltInDiffProvider();
+            BuiltInDiffProvider.Options options = DiffModuleConfig.getDefault().getOptions();
+            options.ignoreLeadingAndtrailingWhitespace = true;
+            options.ignoreInnerWhitespace = true;
+            provider.setOptions(options);
+            diff = provider;
+        } else {
+            diff = DiffModuleConfig.getDefault().getDefaultDiffProvider();
+        }
         Difference[] diffs;
         try {
             return diff.computeDiff(first, second);
@@ -1660,7 +1790,7 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
         if (font == null) return;
         FontMetrics fm = jSplitPane1.getFontMetrics(jSplitPane1.getFont());
         String maxDiffNumber = Integer.toString(Math.max(1, diffs.length));
-        int neededWidth = fm.stringWidth(maxDiffNumber + " /" + maxDiffNumber);
+        int neededWidth = fm.stringWidth(maxDiffNumber + " / " + maxDiffNumber) + 16;
         jSplitPane1.setDividerSize(Math.max(neededWidth, INITIAL_DIVIDER_SIZE));
     }
 
@@ -1693,6 +1823,22 @@ public class EditableDiffView extends DiffControllerImpl implements DiffView, Do
     Color getColorLines() {
         return colorLines;
     }
+
+    Color getSelectedChangeColor() {
+        Color accent = UIManager.getColor("Component.focusColor"); // NOI18N
+        return accent != null ? accent : new Color(59, 130, 246);
+    }
+
+    Color getInlineColor(Difference difference) {
+        Color background = getColor(difference);
+        // Preserve the configured hue while separating changed words from whole-line fills.
+        boolean dark = background.getRed() + background.getGreen() + background.getBlue() < 384;
+        int target = dark ? 255 : 0;
+        return new Color((background.getRed() * 9 + target) / 10,
+                (background.getGreen() * 9 + target) / 10,
+                (background.getBlue() * 9 + target) / 10);
+    }
+
 
     /**
      * Integration provider for the error stripe.

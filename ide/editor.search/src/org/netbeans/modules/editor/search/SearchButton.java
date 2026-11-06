@@ -30,7 +30,7 @@ import org.openide.util.NbBundle;
 
 public class SearchButton {
 
-    private static final Insets BUTTON_INSETS = new Insets(2, 1, 0, 1);
+    private static final Insets BUTTON_INSETS = new Insets(3, 6, 3, 6);
 
     public static JButton createButton(final String imageIcon, final String resName) {
         JButton button = new JButton(
@@ -60,6 +60,7 @@ public class SearchButton {
     }
     
     private static void processButton(AbstractButton button) {
+        button.putClientProperty("JButton.buttonType", "toolBarButton"); // NOI18N
         removeButtonContentAreaAndBorder(button);
         button.setMargin(BUTTON_INSETS);
         button.addMouseListener(sharedMouseListener);

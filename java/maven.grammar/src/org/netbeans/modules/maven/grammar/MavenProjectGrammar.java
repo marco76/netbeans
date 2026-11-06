@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
@@ -143,6 +144,16 @@ public class MavenProjectGrammar extends AbstractSchemaBasedGrammar {
         }
         
         if (path.endsWith("project/properties") || path.endsWith("profile/properties")) {
+            result.addAll(hardwiredProperty(hintCtx, "maven.compiler.release", //NOI18N
+                    "<html><b>maven.compiler.release</b><p>Java release used by the Maven Compiler Plugin.</p></html>")); //NOI18N
+            result.addAll(hardwiredProperty(hintCtx, "maven.compiler.source", //NOI18N
+                    "<html><b>maven.compiler.source</b><p>Java source language level.</p></html>")); //NOI18N
+            result.addAll(hardwiredProperty(hintCtx, "maven.compiler.target", //NOI18N
+                    "<html><b>maven.compiler.target</b><p>Generated Java bytecode level.</p></html>")); //NOI18N
+            result.addAll(hardwiredProperty(hintCtx, "project.build.sourceEncoding", //NOI18N
+                    "<html><b>project.build.sourceEncoding</b><p>Character encoding for project sources and resources.</p></html>")); //NOI18N
+            result.addAll(hardwiredProperty(hintCtx, "project.reporting.outputEncoding", //NOI18N
+                    "<html><b>project.reporting.outputEncoding</b><p>Character encoding for generated reports.</p></html>")); //NOI18N
             result.addAll(hardwiredProperty(hintCtx, Constants.HINT_DISPLAY_NAME, "<html><h4>netbeans.hint.displayName</h4><p>A NetBeans specific property, only applicable within the IDE.</p><br/>Used by NetBeans to customize the display of the project in question.</html>"));
             result.addAll(hardwiredProperty(hintCtx, Constants.HINT_LICENSE, "<html><h4>netbeans.hint.license</h4><p>A NetBeans specific property, only applicable within the IDE.</p><br/>Used by NetBeans to select a license header template from the IDE's default set.</html>"));
             result.addAll(hardwiredProperty(hintCtx, Constants.HINT_LICENSE_PATH, "<html><h4>netbeans.hint.licensePath</h4><p>A NetBeans specific property, only applicable within the IDE.</p><br/>Used by NetBeans to find license header template from project's space in the filesystem. <br/>Value is an absolute or relative path to the template file.</html>"));
@@ -363,11 +374,14 @@ public class MavenProjectGrammar extends AbstractSchemaBasedGrammar {
                 }
                 FileObject fo = getEnvironment().getFileObject();
                 if (fo != null) {
-                    List<String> set = new ArrayList<>();
-                    set.add("basedir");
-                    set.add("project.build.finalName");
-                    set.add("project.version");
-                    set.add("project.groupId");
+                    Set<String> set = new TreeSet<>(Arrays.asList(
+                            "basedir", "project.basedir", "project.groupId", //NOI18N
+                            "project.artifactId", "project.version", "project.name", //NOI18N
+                            "project.packaging", "project.build.directory", //NOI18N
+                            "project.build.finalName", "project.build.outputDirectory", //NOI18N
+                            "project.build.testOutputDirectory", "project.build.sourceDirectory", //NOI18N
+                            "project.build.testSourceDirectory", "project.reporting.outputDirectory", //NOI18N
+                            "project.build.sourceEncoding", "project.reporting.outputEncoding")); //NOI18N
                     Project p;
                     try {
                         p = ProjectManager.getDefault().findProject(fo.getParent());
@@ -386,7 +400,6 @@ public class MavenProjectGrammar extends AbstractSchemaBasedGrammar {
                         //Exceptions.printStackTrace(ex);
                     }
                     Collection<GrammarResult> elems = new ArrayList<>();
-                    Collections.sort(set);
                     String suffix = virtualTextCtx.getNodeValue().substring(prefix.length());
                     int pplen = propPrefix.length();
                     for (String pr : set) {

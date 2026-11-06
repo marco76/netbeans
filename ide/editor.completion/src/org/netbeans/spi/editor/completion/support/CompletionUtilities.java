@@ -26,6 +26,7 @@ import java.awt.Graphics;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import javax.swing.ImageIcon;
+import javax.swing.UIManager;
 import javax.swing.text.JTextComponent;
 import org.netbeans.modules.editor.completion.CompletionSupportSpiPackageAccessor;
 import org.netbeans.modules.editor.completion.PatchedHtmlRenderer;
@@ -50,12 +51,12 @@ public final class CompletionUtilities {
     /**
      * The gap between left edge and icon.
      */
-    private static final int BEFORE_ICON_GAP = 1;
+    private static final int BEFORE_ICON_GAP = 6;
     
     /**
      * The gap between icon and the left text.
      */
-    private static final int AFTER_ICON_GAP = 4;
+    private static final int AFTER_ICON_GAP = 6;
     
     /**
      * By default 16x16 icons should be used.
@@ -66,12 +67,12 @@ public final class CompletionUtilities {
     /**
      * The gap between left and right text.
      */
-    private static final int BEFORE_RIGHT_TEXT_GAP = 5;
+    private static final int BEFORE_RIGHT_TEXT_GAP = 16;
 
     /**
      * The gap between right text and right edge.
      */
-    private static final int AFTER_RIGHT_TEXT_GAP = 3;
+    private static final int AFTER_RIGHT_TEXT_GAP = 8;
     
     private CompletionUtilities() {
         // no instances
@@ -154,12 +155,21 @@ public final class CompletionUtilities {
         FontMetrics fm = g.getFontMetrics(defaultFont);
         int textY = (height - fm.getHeight())/2 + fm.getHeight() - fm.getDescent();
         if (rightHtmlText != null && rightHtmlText.length() > 0) {
+            Color rightColor = UIManager.getColor(selected
+                    ? "nb.completion.selectedRightForeground" // NOI18N
+                    : "nb.completion.rightForeground"); // NOI18N
+            if (rightColor == null && !selected) {
+                rightColor = UIManager.getColor("Label.disabledForeground"); // NOI18N
+            }
+            if (rightColor == null) {
+                rightColor = defaultColor;
+            }
             int rightTextWidth = (int)PatchedHtmlRenderer.renderHTML(rightHtmlText, g, 0, 0, Integer.MAX_VALUE, 0,
-                    defaultFont, defaultColor, PatchedHtmlRenderer.STYLE_CLIP, false, true);
+                    defaultFont, rightColor, PatchedHtmlRenderer.STYLE_CLIP, false, true);
             rightTextX = Math.max(iconWidth, rightTextX - rightTextWidth);
             // Render right text
             PatchedHtmlRenderer.renderHTML(rightHtmlText, g, rightTextX, textY, rightTextWidth, textY,
-                defaultFont, defaultColor, PatchedHtmlRenderer.STYLE_CLIP, true, selected);
+                defaultFont, rightColor, PatchedHtmlRenderer.STYLE_CLIP, true, selected);
             rightTextX = Math.max(iconWidth, rightTextX - BEFORE_RIGHT_TEXT_GAP);
         }
 

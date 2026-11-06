@@ -39,7 +39,7 @@ public class XMLCompletionResultItemPaintComponent extends JPanel {
     public XMLCompletionResultItemPaintComponent() {
         super();
         setOpaque(true);
-        setBorder(BorderFactory.createEmptyBorder(0, 3, 0, 3));
+        setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
     }
     
     
@@ -167,13 +167,14 @@ public class XMLCompletionResultItemPaintComponent extends JPanel {
 
     protected int getWidth(String s, Font font) {
         if (font != null)
-            return getFontMetrics(getDrawFont()).stringWidth(s)*2;
-        return (s == null)?fontMetrics.stringWidth(""):fontMetrics.stringWidth(s)*2;
+            return getFontMetrics(font).stringWidth(s);
+        return (s == null)?fontMetrics.stringWidth(""):fontMetrics.stringWidth(s);
     }
 
     protected Color getColor(String s, Color defaultColor) {
-        return isSelected ? getForeground()
-        : defaultColor;
+        return isSelected || defaultColor == null
+                || TYPE_COLOR.equals(defaultColor) || KEYWORD_COLOR.equals(defaultColor)
+                ? getForeground() : defaultColor;
     }
 
     private void storeWidth(String s) {
@@ -238,7 +239,7 @@ public class XMLCompletionResultItemPaintComponent extends JPanel {
     private boolean isSelected;
     private boolean isDeprecated;
     private static final String THROWS = " throws "; // NOI18N
-    private static String str; //completion item text
+    protected String str; //completion item text
     private static final String[] frequentWords = new String[] {
         "", " ", "[]", "(", ")", ", ", "String", THROWS // NOI18N
     };

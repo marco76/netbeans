@@ -41,6 +41,7 @@ import javax.swing.text.Position;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.DocumentSymbolOptions;
 import org.eclipse.lsp4j.DocumentSymbolParams;
+import org.eclipse.lsp4j.InitializeResult;
 import org.eclipse.lsp4j.ServerCapabilities;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.SymbolKind;
@@ -55,6 +56,7 @@ import org.netbeans.modules.lsp.client.LSPBindings;
 import org.netbeans.modules.lsp.client.LSPBindings.BackgroundTask;
 import org.netbeans.modules.lsp.client.Utils;
 import org.openide.filesystems.FileObject;
+import org.openide.filesystems.FileUtil;
 import org.openide.loaders.DataObject;
 import org.openide.loaders.DataObjectNotFoundException;
 import org.openide.util.ImageUtilities;
@@ -117,22 +119,32 @@ public class BreadcrumbsImpl implements BackgroundTask {
         if (caret != null && (!element.getChildren().isEmpty())) {
             element = element.getChildren().get(0);
 
-            int caretPos = caret.getDot();
-
-            OUTER:
-            while (true) {
-                for (BreadcrumbsElement child : element.getChildren()) {
-                    BreadcrumbsElementImpl impl = (BreadcrumbsElementImpl) child;
-                    if (impl.startPos.getOffset() <= caretPos && caretPos <= impl.endPos.getOffset()) {
-                        element = child;
-                        continue OUTER;
-                    }
-                }
-                break;
+            BreadcrumbsElement selected = findSymbol(element, caret.getDot());
+            if (selected != null) {
+                element = selected;
             }
 
             BreadcrumbsController.setBreadcrumbs(doc, element);
         }
+    }
+
+    // Provider groups have no source range. Search their symbols without
+    // selecting an empty group or losing the file fallback outside symbols.
+    static BreadcrumbsElement findSymbol(BreadcrumbsElement parent, int caretPos) {
+        for (BreadcrumbsElement child : parent.getChildren()) {
+            if (child instanceof BreadcrumbsElementImpl impl) {
+                if (impl.startPos.getOffset() <= caretPos && caretPos <= impl.endPos.getOffset()) {
+                    BreadcrumbsElement nested = findSymbol(child, caretPos);
+                    return nested != null ? nested : child;
+                }
+            } else {
+                BreadcrumbsElement nested = findSymbol(child, caretPos);
+                if (nested != null) {
+                    return nested;
+                }
+            }
+        }
+        return null;
     }
 
     private static final class RootBreadcrumbsElementImpl implements BreadcrumbsElement {
@@ -185,7 +197,7 @@ public class BreadcrumbsImpl implements BackgroundTask {
                 this.children = BreadcrumbsElementImpl.create(this, allSymbols.get(0).second(), file, doc);
             } else {
                 this.children = allSymbols.stream()
-                                          .map(p -> (BreadcrumbsElement) new ProviderBreadcrumbsElementImpl(file, p.first(), doc, root, p.second()))
+                                          .map(p -> (BreadcrumbsElement) new ProviderBreadcrumbsElementImpl(file, p.first(), doc, this, p.second()))
                                           .toList();
             }
         }
@@ -230,6 +242,19 @@ public class BreadcrumbsImpl implements BackgroundTask {
 
     }
 
+    static String providerDisplayName(InitializeResult result, String fallback) {
+        ServerCapabilities capabilities = result.getCapabilities();
+        Either<Boolean, DocumentSymbolOptions> provider = capabilities != null
+                ? capabilities.getDocumentSymbolProvider() : null;
+        DocumentSymbolOptions options = provider != null && provider.isRight() ? provider.getRight() : null;
+        if (options != null && options.getLabel() != null && !options.getLabel().isBlank()) {
+            return options.getLabel();
+        }
+        // Server information is optional in the initialize response.
+        String name = result.getServerInfo() != null ? result.getServerInfo().getName() : null;
+        return name != null && !name.isBlank() ? name : fallback;
+    }
+
     private static final class ProviderBreadcrumbsElementImpl implements BreadcrumbsElement {
         private final LSPBindings bindings;
         private final String displayName;
@@ -241,16 +266,7 @@ public class BreadcrumbsImpl implements BackgroundTask {
             this.root = root;
             this.children = BreadcrumbsElementImpl.create(this, symbols, file, doc);
 
-            String displayName = bindings.getInitResult().getServerInfo().getName();
-            ServerCapabilities capa = bindings.getInitResult().getCapabilities();
-            Either<Boolean, DocumentSymbolOptions> docSymProvider = capa != null ? capa.getDocumentSymbolProvider() : null;
-            DocumentSymbolOptions docSymOpts = docSymProvider != null && docSymProvider.isRight() ? docSymProvider.getRight() : null;
-
-            if (docSymOpts != null && docSymOpts.getLabel() != null) {
-                displayName = docSymOpts.getLabel();
-            }
-
-            this.displayName = displayName;
+            this.displayName = providerDisplayName(bindings.getInitResult(), file.getNameExt());
         }
 
         @Override
@@ -285,7 +301,7 @@ public class BreadcrumbsImpl implements BackgroundTask {
 
     }
 
-    private static final class BreadcrumbsElementImpl implements BreadcrumbsElement {
+    static final class BreadcrumbsElementImpl implements BreadcrumbsElement {
 
         private final BreadcrumbsElement parent;
         private final DocumentSymbol symbol;
@@ -375,6 +391,13 @@ public class BreadcrumbsImpl implements BackgroundTask {
         return new SideBarFactory() {
             @Override
             public JComponent createSideBar(JTextComponent target) {
+                // Native language support already supplies a view of the shared
+                // breadcrumb model. The global LSP registration is a fallback.
+                String mimeType = NbEditorUtilities.getMimeType(target);
+                if (FileUtil.getConfigFile("Editors/" + mimeType + "/SideBar/"
+                        + "org-netbeans-modules-editor-breadcrumbs-spi-BreadcrumbsController-createSideBarFactory.instance") != null) {
+                    return null;
+                }
                 return new LSPBreadcrumbPanel(delegate, target);
             }
         };

@@ -201,6 +201,101 @@ public class RunJarPrereqCheckerTest extends NbTestCase {
         checkMainClass("org.demo.Main2");
     }
 
+    public void testSpringBootMainClassWithUnresolvedManifest() throws Exception {
+        writeSpringBootPom("", "<mainClass>org.demo.Application</mainClass>");
+        checkMainClass("org.demo.Application");
+    }
+
+    public void testSpringBootStartClassProperty() throws Exception {
+        writeSpringBootPom("<start-class>org.demo.Application</start-class>", "");
+        checkMainClass("org.demo.Application");
+    }
+
+    public void testSpringBootUnresolvedMainClassUsesChooser() throws Exception {
+        writeSpringBootPom("<mainClass>${missing.mainClass}</mainClass>",
+                "<mainClass>${start-class}</mainClass>");
+        RunJarPrereqChecker.setMainClass("org.demo.SelectedApplication");
+        try {
+            checkMainClass("org.demo.SelectedApplication");
+        } finally {
+            RunJarPrereqChecker.setMainClass(null);
+        }
+    }
+
+    public void testBootGoalPrefersApplicationOverJarLauncher() throws Exception {
+        checkBootGoalMainClass("<mainClass>org.demo.Application</mainClass>", "",
+                "org.demo.Application", "spring-boot:run");
+    }
+
+    public void testQualifiedBootGoalUsesStartClass() throws Exception {
+        checkBootGoalMainClass("", "<start-class>org.demo.Application</start-class>",
+                "org.demo.Application", "org.springframework.boot:spring-boot-maven-plugin:3.5.0:run");
+    }
+
+    public void testBootExplanationIsScopedToBootRunsOrPlugins() throws Exception {
+        org.netbeans.modules.maven.execute.BeanRunConfig config = new org.netbeans.modules.maven.execute.BeanRunConfig();
+        writeSpringBootPom("", "");
+        config.setProject(ProjectManager.getDefault().findProject(d));
+        org.apache.maven.project.MavenProject project = config.getMavenProject();
+        project.getBuild().getPlugins().removeIf(plugin -> "spring-boot-maven-plugin".equals(plugin.getArtifactId()));
+        config.setGoals(java.util.List.of("exec:exec"));
+        assertFalse(RunJarPrereqChecker.isSpringBoot(config));
+        config.setGoals(java.util.List.of("spring-boot:run"));
+        assertTrue(RunJarPrereqChecker.isSpringBoot(config));
+        config.setGoals(java.util.List.of("org.springframework.boot:spring-boot-maven-plugin:3.5.0:run"));
+        assertTrue(RunJarPrereqChecker.isSpringBoot(config));
+        config.setGoals(java.util.List.of("exec:exec"));
+        org.apache.maven.model.Plugin plugin = new org.apache.maven.model.Plugin();
+        plugin.setGroupId("example");
+        plugin.setArtifactId("spring-boot-maven-plugin");
+        project.getBuild().addPlugin(plugin);
+        assertFalse(RunJarPrereqChecker.isSpringBoot(config));
+        plugin.setGroupId("org.springframework.boot");
+        assertTrue(RunJarPrereqChecker.isSpringBoot(config));
+    }
+
+    private void checkBootGoalMainClass(String configuration, String properties,
+            String expected, String goal) throws Exception {
+        writeSpringBootPom(properties, configuration);
+        FileObject pom = d.getFileObject("pom.xml");
+        TestFileUtils.writeFile(d, "pom.xml", pom.asText().replace(
+                "<mainClass>${start-class}</mainClass>",
+                "<mainClass>org.springframework.boot.loader.launch.JarLauncher</mainClass>"));
+        Project project = ProjectManager.getDefault().findProject(d);
+        RunConfig config = ActionToGoalUtils.createRunConfig(ActionProvider.COMMAND_RUN,
+                project.getLookup().lookup(NbMavenProjectImpl.class), project.getLookup());
+        ((org.netbeans.modules.maven.execute.BeanRunConfig) config).setGoals(java.util.List.of(goal));
+        config.setProperty("testMainClass", "${packageClassName}");
+        assertTrue(new RunJarPrereqChecker().checkRunConfig(config));
+        assertEquals(expected, config.getProperties().get("testMainClass"));
+    }
+
+    private void writeSpringBootPom(String properties, String bootConfiguration) throws IOException {
+        TestFileUtils.writeFile(d, "pom.xml", """
+                <project>
+                    <modelVersion>4.0.0</modelVersion>
+                    <groupId>testgrp</groupId>
+                    <artifactId>testart</artifactId>
+                    <version>1.0</version>
+                    <properties>%s</properties>
+                    <build><plugins>
+                        <plugin>
+                            <groupId>org.apache.maven.plugins</groupId>
+                            <artifactId>maven-jar-plugin</artifactId>
+                            <configuration><archive><manifest>
+                                <mainClass>${start-class}</mainClass>
+                            </manifest></archive></configuration>
+                        </plugin>
+                        <plugin>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-maven-plugin</artifactId>
+                            <configuration>%s</configuration>
+                        </plugin>
+                    </plugins></build>
+                </project>
+                """.formatted(properties, bootConfiguration));
+    }
+
     private void checkMainClass(String mainClass) throws IOException {
         Project proj = ProjectManager.getDefault().findProject(d);
         RunConfig rc = ActionToGoalUtils.createRunConfig(ActionProvider.COMMAND_RUN, proj.getLookup().lookup(NbMavenProjectImpl.class), proj.getLookup());

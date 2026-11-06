@@ -46,6 +46,7 @@ import javax.swing.JToolTip;
 import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
@@ -63,19 +64,19 @@ import org.openide.util.NbBundle;
  */
 public final class CompletionLayout {
     
-    public static final int COMPLETION_ITEM_HEIGHT = 16;
+    public static final int COMPLETION_ITEM_HEIGHT = 22;
     
     /**
      * Visual shift of the completion window to the left
      * so that the text in the rendered completion items.aligns horizontally
      * with the text in the document.
      */
-    private static final int COMPLETION_ANCHOR_HORIZONTAL_SHIFT = 22;
+    private static final int COMPLETION_ANCHOR_HORIZONTAL_SHIFT = 28;
     
     /**
      * Gap between caret and the displayed popup.
      */
-    static final int POPUP_VERTICAL_GAP = 1;
+    static final int POPUP_VERTICAL_GAP = 4;
 
     private Reference<JTextComponent> editorComponentRef;
 
@@ -452,11 +453,41 @@ public final class CompletionLayout {
                 if (shortcutHint != null) {
                     JPanel panel = new JPanel();
                     panel.setLayout(new BorderLayout());
+                    Color borderColor = UIManager.getColor("nb.completion.borderColor"); // NOI18N
+                    if (borderColor == null) {
+                        borderColor = UIManager.getColor("PopupMenu.borderColor"); // NOI18N
+                    }
+                    if (borderColor == null) {
+                        borderColor = Color.gray;
+                    }
+                    panel.setBorder(BorderFactory.createLineBorder(borderColor, 1));
+                    completionScrollPane.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
                     panel.add(completionScrollPane, BorderLayout.CENTER);
                     JLabel label = new JLabel();
-                    label.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.white),
-                            BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 1, 1, 1, Color.gray), BorderFactory.createEmptyBorder(2, 2, 2, 2))));
-                    label.setFont(label.getFont().deriveFont((float)label.getFont().getSize() - 2));
+                    Color sepColor = UIManager.getColor("nb.completion.separatorColor"); // NOI18N
+                    if (sepColor == null) {
+                        sepColor = UIManager.getColor("Separator.foreground"); // NOI18N
+                    }
+                    if (sepColor == null) {
+                        sepColor = borderColor;
+                    }
+                    label.setBorder(BorderFactory.createCompoundBorder(
+                            BorderFactory.createMatteBorder(1, 0, 0, 0, sepColor),
+                            BorderFactory.createEmptyBorder(4, 8, 4, 8)));
+                    Color hintBg = completionScrollPane.getView().getBackground();
+                    if (hintBg != null) {
+                        label.setBackground(hintBg);
+                        label.setOpaque(true);
+                        panel.setBackground(hintBg);
+                    }
+                    Color hintFg = UIManager.getColor("nb.completion.rightForeground"); // NOI18N
+                    if (hintFg == null) {
+                        hintFg = UIManager.getColor("Label.disabledForeground"); // NOI18N
+                    }
+                    if (hintFg != null) {
+                        label.setForeground(hintFg);
+                    }
+                    label.setFont(label.getFont().deriveFont((float)label.getFont().getSize() - 1));
                     label.setHorizontalAlignment(SwingConstants.RIGHT);
                     label.setText(NbBundle.getMessage(CompletionLayout.class, "TXT_completion_shortcut_tips", additionalItemsText, shortcutHint)); //NOI18N
                     panel.add(label, BorderLayout.SOUTH);

@@ -20,6 +20,8 @@ package org.netbeans.modules.spring.beans.model.impl;
 
 import java.util.*;
 import javax.lang.model.element.AnnotationMirror;
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import org.netbeans.api.java.classpath.ClassPath;
 import org.netbeans.api.java.queries.SourceForBinaryQuery;
@@ -55,6 +57,12 @@ public class SpringBeanImpl extends PersistentObject implements SpringBean, Refr
     protected SpringBeanImpl(AnnotationModelHelper helper, TypeElement typeElement) {
         super(helper, typeElement);
         boolean valid = refresh(typeElement);
+        assert valid;
+    }
+
+    protected SpringBeanImpl(AnnotationModelHelper helper, TypeElement typeElement, ExecutableElement methodElement) {
+        super(helper, typeElement);
+        boolean valid = refreshMethod(typeElement, methodElement);
         assert valid;
     }
 
@@ -104,25 +112,51 @@ public class SpringBeanImpl extends PersistentObject implements SpringBean, Refr
                 getHelper().getCompilationController().getElements().getAllAnnotationMirrors(type));
         AnnotationMirror annotationMirror = getAnnotationMirror(types);
         if (annotationMirror == null) {
-            return false;
+            if (!SpringBeanMethodSupport.isSpringDataRepository(getHelper(), type)) {
+                return false;
+            }
+            className = ElementUtilities.getBinaryName(type);
+            names.clear();
+            names.add(getConvertedClassName(className));
+            id = names.get(0);
+            refreshLocation(className, type);
+            return true;
         }
         AnnotationParser parser = AnnotationParser.create(getHelper());
         parser.expectString("value", null); //NOI18N
+        parser.expectString("name", null); //NOI18N
         ParseResult parseResult = parser.parse(annotationMirror);
         className = ElementUtilities.getBinaryName(type);
         names.clear();
-        if (parseResult.get("value", String.class) == null) { //NOI18N
-            names.add(getConvertedClassName(className));
-        } else {
-            names.add(parseResult.get("value", String.class)); //NOI18N
-        }
+        String explicitName = SpringBeanMethodSupport.resolveExplicitName(parseResult);
+        names.add(explicitName == null ? getConvertedClassName(className) : explicitName);
+        id = names.get(0);
 
-        refreshLocation(className);
+        refreshLocation(className, type);
 
         return true;
     }
 
-    private void refreshLocation(String fqn) {
+    private boolean refreshMethod(TypeElement declaringType, ExecutableElement method) {
+        AnnotationMirror beanMirror = getHelper().getAnnotationsByType(method.getAnnotationMirrors()).get(SpringBeanMethodSupport.BEAN_ANNOTATION);
+        if (beanMirror == null) {
+            return false;
+        }
+        String declaringClassName = ElementUtilities.getBinaryName(declaringType);
+        factoryBean = getConvertedClassName(declaringClassName);
+        factoryMethod = method.getSimpleName().toString();
+        className = SpringBeanMethodSupport.resolveReturnClassName(method);
+        names.clear();
+        SpringBeanMethodSupport.extractBeanMethodNames(beanMirror, names);
+        if (names.isEmpty()) {
+            names.add(factoryMethod);
+        }
+        id = names.get(0);
+        refreshLocation(declaringClassName, method);
+        return true;
+    }
+
+    private void refreshLocation(String fqn, Element element) {
         String cpBase = fqn.replace('.', '/'); //NOI18N
         ClassPath sourceCP = getHelper().getClasspathInfo().getClassPath(ClasspathInfo.PathKind.SOURCE);
         FileObject classFO = sourceCP.findResource(cpBase + ".java"); //NOI18N
@@ -133,7 +167,7 @@ public class SpringBeanImpl extends PersistentObject implements SpringBean, Refr
         }
 
         if (classFO != null) {
-            location = new SpringAnnotatedBeanLocation(classFO);
+            location = new SpringAnnotatedBeanLocation(classFO, SpringBeanMethodSupport.resolveElementOffset(getHelper(), element));
         }
     }
 

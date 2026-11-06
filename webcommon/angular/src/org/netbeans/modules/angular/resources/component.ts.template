@@ -1,0 +1,14 @@
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { CommonModule } from '@angular/common';
+
+@Component({
+  selector: 'app-${name?lower_case?replace(".component", "")}',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './${name?replace(".component", "")}.component.html',
+  styleUrls: ['./${name?replace(".component", "")}.component.css']
+})
+export class ${name?replace(".component", "")?cap_first}Component {
+  @Input() title = '${name?replace(".component", "")}';
+  @Output() selected = new EventEmitter<string>();
+}

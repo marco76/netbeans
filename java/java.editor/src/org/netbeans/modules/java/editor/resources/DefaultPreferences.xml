@@ -33,7 +33,7 @@
         <value><![CDATA[false]]></value>
     </entry>
     <entry javaType="java.lang.Boolean" name="code-folding-collapse-import">
-        <value><![CDATA[false]]></value>
+        <value><![CDATA[true]]></value>
     </entry>
     <entry javaType="java.lang.Boolean" name="code-folding-collapse-javadoc">
         <value><![CDATA[false]]></value>

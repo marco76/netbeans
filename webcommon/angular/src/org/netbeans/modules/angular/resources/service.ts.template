@@ -1,0 +1,15 @@
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ${name?replace(".service", "")?cap_first}Service {
+
+  constructor(private readonly http: HttpClient) {}
+
+  findAll<T>(endpoint = '/api/items'): Observable<T[]> {
+    return this.http.get<T[]>(endpoint);
+  }
+}

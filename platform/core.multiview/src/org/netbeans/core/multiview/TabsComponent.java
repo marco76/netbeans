@@ -576,6 +576,11 @@ class TabsComponent extends JPanel {
         Mnemonics.setLocalizedText(button, Actions.cutAmpersand(description.getDisplayName()));
         button.setModel(new TabsButtonModel(description));
         button.setRolloverEnabled(true);
+        // FlatLaf renders editor views as quiet, rounded toolbar tabs. Other
+        // look and feels simply ignore these client properties.
+        button.putClientProperty("JButton.buttonType", "toolBarButton");
+        button.putClientProperty("JComponent.roundRect", Boolean.TRUE);
+        button.setMargin(new Insets(4, 12, 4, 12));
         Border b = (getButtonBorder());
         if (b != null) {
            button.setBorder(b);

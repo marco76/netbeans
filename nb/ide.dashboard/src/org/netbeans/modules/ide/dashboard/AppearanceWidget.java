@@ -46,20 +46,20 @@ import static javax.swing.Action.SHORT_DESCRIPTION;
  */
 @Messages({
     "TITLE_Appearance=Look & Feel",
-    "TXT_Appearance=The default NetBeans theme is FlatLaf Light. You could also try FlatLaf Dark.",
+    "TXT_Appearance=The default AlpLibre IDE theme is Marmo Light. You could also try FlatLaf Dark.",
     "TXT_RequiresRestart=Theme changes require restart.",
     "TXT_AdvancedLAF=Change theme accent color and more in the options panel.",
     "LBL_AdvancedLAFPanel=FlatLaf Options",
     "STATUS_AdvancedLAFPanel=Open FlatLaf options panel.",
     "LBL_DarkLaf=Switch to FlatLaf Dark",
-    "LBL_DefaultLaf=Reset to FlatLaf Light",
+    "LBL_DefaultLaf=Reset to Marmo Light",
     "TITLE_RestartIDE=Restart IDE",
     "TXT_RestartIDE=Click here to restart IDE and apply your theme change."
 })
 public class AppearanceWidget implements DashboardWidget {
 
-    private final static String FLAT_LIGHT_LAF = "com.formdev.flatlaf.FlatLightLaf";
-    private final static String FLAT_LIGHT_PROFILE = "FlatLaf Light";
+    private final static String DEFAULT_LAF = "org.netbeans.swing.laf.flatlaf.MarmoLightLaf";
+    private final static String DEFAULT_PROFILE = "Marmo Light";
     private final static String FLAT_DARK_LAF = "com.formdev.flatlaf.FlatDarkLaf";
     private final static String FLAT_DARK_PROFILE = "FlatLaf Dark";
 
@@ -67,7 +67,7 @@ public class AppearanceWidget implements DashboardWidget {
 
     public AppearanceWidget() {
         String laf = NbPreferences.root().node("laf").get("laf", "");
-        isDefaultLaf = laf.isEmpty() || FLAT_LIGHT_LAF.equals(laf);
+        isDefaultLaf = laf.isEmpty() || DEFAULT_LAF.equals(laf);
     }
 
     @Override
@@ -100,8 +100,8 @@ public class AppearanceWidget implements DashboardWidget {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            String laf = dark ? FLAT_DARK_LAF : FLAT_LIGHT_LAF;
-            String profile = dark ? FLAT_DARK_PROFILE : FLAT_LIGHT_PROFILE;
+            String laf = dark ? FLAT_DARK_LAF : DEFAULT_LAF;
+            String profile = dark ? FLAT_DARK_PROFILE : DEFAULT_PROFILE;
             NbPreferences.root().node("laf").put("laf", laf);
             FileObject editorConfig = FileUtil.getConfigFile("Editors");
             if (editorConfig != null) {
